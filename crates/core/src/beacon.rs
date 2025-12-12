@@ -335,6 +335,7 @@ pub struct HeaderData {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct BlockResponse {
+  pub version: String,
   pub data: BlockData,
 }
 

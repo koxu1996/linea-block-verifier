@@ -1,11 +1,13 @@
 //! Error types for header verification.
 
+use alloc::string::String;
 use alloy_primitives::{Address, B256};
 use core::fmt;
 
 /// Error type for header verification failures.
 #[derive(Debug)]
 pub enum VerifyError {
+  UnsupportedVersion(String),
   BeaconSignatureNotEmpty,
   InvalidProposer {
     expected: Address,
@@ -77,6 +79,9 @@ impl std::error::Error for VerifyError {}
 impl fmt::Display for VerifyError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
+      VerifyError::UnsupportedVersion(version) => {
+        write!(f, "Unsupported beacon version: {}, expected 'maru'", version)
+      }
       VerifyError::BeaconSignatureNotEmpty => {
         write!(f, "Expected empty beacon block signature")
       }

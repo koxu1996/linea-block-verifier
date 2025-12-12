@@ -13,6 +13,7 @@ use crate::{compute_beacon_block_root, compute_body_hash};
 /// the Linea beacon chain data.
 ///
 /// This function performs the following verifications:
+/// 0. Beacon version is "maru" (other forks not supported)
 /// 1. Beacon block signature is empty (Linea-specific)
 /// 2. Proposer matches expected sequencer address
 /// 3. Beacon block root is correctly computed and matches attestation
@@ -32,6 +33,11 @@ pub fn verify_header(
   let beacon_block_signature = &block_response.data.signature;
   let beacon_header = &header_response.data.message;
   let beacon_slot = beacon_block.slot;
+
+  // Check 0: Verify beacon version is "maru" (other forks are not supported).
+  if block_response.version != "maru" {
+    return Err(VerifyError::UnsupportedVersion(block_response.version.clone()));
+  }
 
   // Check 1: Verify beacon block signature is empty (not used by Linea).
   if !beacon_block_signature.is_empty() {
