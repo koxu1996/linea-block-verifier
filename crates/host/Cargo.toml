@@ -1,0 +1,17 @@
+[package]
+name = "linea-proof-host"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+linea-proof-core = { workspace = true, features = ["std"] }
+tokio.workspace = true
+color-eyre.workspace = true
+alloy-primitives.workspace = true
+alloy-consensus.workspace = true
+alloy-provider.workspace = true
+alloy-eips.workspace = true
+alloy-rlp.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+hex.workspace = true

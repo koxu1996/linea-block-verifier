@@ -1,0 +1,42 @@
+[workspace]
+members = [
+  "crates/core",
+  "crates/host",
+  "crates/verify-header-demo",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+# Asynchronous runtime.
+tokio = { version = "1.48.0", default-features = false, features = ["rt-multi-thread", "macros"] }
+
+# Error handling.
+color-eyre = { version = "0.6.5", default-features = false, features = ["track-caller", "capture-spantrace"] }
+
+# Ethereum-based blockchains.
+alloy-provider = { version = "1.1", default-features = false, features = ["reqwest", "reqwest-default-tls"] }
+alloy-consensus = { version = "1.1", default-features = false, features = [] }
+alloy-primitives = { version = "1.1", default-features = false, features = ["rlp", "k256"] }
+alloy-rpc-types = { version = "1.1", default-features = false, features = ["eth"] }
+alloy-eips = { version = "1.1", default-features = false }
+alloy-rlp = { version = "0.3", default-features = false }
+
+# HTTP client and JSON parsing.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+hex = "0.4"
+
+# URL parsing.
+url = "2.5.7"
+
+# Hex literal for compile-time hex parsing.
+hex-literal = "0.4"
+
+# Workspace crates.
+linea-proof-core = { path = "crates/core" }
+linea-proof-host = { path = "crates/host" }

@@ -1,0 +1,19 @@
+[package]
+name = "risc0-guest"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+linea-proof-core = { path = "../../crates/core", features = ["std"] }
+risc0-zkvm = { version = "3.0.3", default-features = false, features = ["std", "unstable"] }
+
+[patch.crates-io]
+
+# Accelerate ECDSA (based on k256) and Keccak hashing.
+k256 = { git = "https://github.com/risc0/RustCrypto-elliptic-curves", tag = "k256/v0.13.4-risczero.1" } # 11M cycles reduced
+tiny-keccak = { git = "https://github.com/risc0/tiny-keccak", tag = "tiny-keccak/v2.0.2-risczero.0" } # 2M cycles reduced
+
+# Required to compile.
+crypto-bigint = { git = "https://github.com/risc0/RustCrypto-crypto-bigint", tag = "v0.5.5-risczero.0" }

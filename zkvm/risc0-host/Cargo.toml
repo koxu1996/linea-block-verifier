@@ -1,0 +1,16 @@
+[package]
+name = "risc0-host"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+
+[dependencies]
+linea-proof-host = { path = "../../crates/host" }
+risc0-zkvm = "3.0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+anyhow = "1.0"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[build-dependencies]
+risc0-build = { git = "https://github.com/koxu1996/risc0.git", branch = "feature/simpler-guest-integration-v3.0.3" }
