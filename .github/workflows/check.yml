@@ -1,0 +1,32 @@
+name: check
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: System Info
+        run: |
+          uname -a
+          nix --version
+
+      - name: formatting
+        run: nix build -L --no-link --show-trace .#checks.x86_64-linux.formatting
+
+      - name: clippy
+        run: nix build -L --no-link --show-trace .#checks.x86_64-linux.clippy
+
+      - name: linea-proof-core-no-std
+        run: nix build -L --no-link --show-trace .#packages.x86_64-linux.linea-proof-core-no-std
+
+      - name: verify-header-demo
+        run: nix build -L --no-link --show-trace .#packages.x86_64-linux.verify-header-demo
+
