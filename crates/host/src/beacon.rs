@@ -61,7 +61,7 @@ impl Client {
   /// be serialized and passed into a zkVM.
   pub async fn create_verify_input(&self, header: Header) -> eyre::Result<VerifyInput> {
     let chain_id = get_chain_id(self.network);
-    let beacon_slot = beacon_slot_from_block_number(header.number, chain_id);
+    let beacon_slot = beacon_slot_from_block_number(header.number, chain_id)?;
 
     let block_response = self.get_block(beacon_slot).await?;
     let beacon_slot = block_response.data.message.slot;

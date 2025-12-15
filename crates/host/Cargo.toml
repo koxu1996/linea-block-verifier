@@ -1,17 +1,26 @@
 [package]
 name = "linea-proof-host"
-version.workspace = true
-edition.workspace = true
+version = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
+# Workspace crates.
 linea-proof-core = { workspace = true, features = ["std"] }
-tokio.workspace = true
-color-eyre.workspace = true
-alloy-primitives.workspace = true
-alloy-consensus.workspace = true
-alloy-provider.workspace = true
-alloy-eips.workspace = true
-alloy-rlp.workspace = true
-reqwest.workspace = true
-serde.workspace = true
-hex.workspace = true
+
+# Asynchronous runtime.
+tokio = { workspace = true }
+
+# Error handling.
+color-eyre = { workspace = true }
+
+# Ethereum-based blockchains.
+alloy-primitives = { workspace = true }
+alloy-consensus = { workspace = true }
+alloy-provider = { workspace = true }
+alloy-eips = { workspace = true }
+alloy-rlp = { workspace = true }
+
+# HTTP client and JSON parsing.
+reqwest = { workspace = true }
+serde = { workspace = true }
+hex = { workspace = true }

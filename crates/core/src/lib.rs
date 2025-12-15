@@ -24,13 +24,16 @@ pub use beacon::{
   BlockResponse, ExecutionPayload, HeaderData, HeaderResponse,
 };
 pub use constants::{
-  LINEA_MAINNET_CHAIN_ID, LINEA_SEPOLIA_CHAIN_ID, LineaNetwork, get_activation_block, get_chain_id,
-  get_sequencer_address,
+  LINEA_MAINNET_CHAIN_ID, LINEA_MAINNET_GENESIS_BEACON_ROOT, LINEA_SEPOLIA_CHAIN_ID,
+  LINEA_SEPOLIA_GENESIS_BEACON_ROOT, LineaNetwork, get_activation_block, get_chain_id,
+  get_genesis_beacon_root, get_sequencer_address,
 };
 pub use error::VerifyError;
-pub use verify::verify_header;
+pub use verify::{verify_block_hash, verify_header};
 #[cfg(feature = "std")]
-pub use zkvm::{VerifyInput, verify_from_bytes};
+pub use zkvm::{
+  VerifyBlockHashInput, VerifyInput, VerifyMode, verify_block_hash_from_bytes, verify_from_bytes,
+};
 
 use alloc::vec::Vec;
 use alloy_primitives::{B256, keccak256};
@@ -43,18 +46,24 @@ use alloy_rlp::Encodable;
 ///
 /// - Mainnet: activation_block = 24787631, so slot 1 = block 24787632
 /// - Sepolia: activation_block = 18665903, so slot 1 = block 18665904
-pub fn beacon_slot_from_block_number(block_number: u64, chain_id: u64) -> u64 {
+///
+/// Returns an error if the chain ID is unsupported or the block number is at or before
+/// the activation block.
+pub fn beacon_slot_from_block_number(block_number: u64, chain_id: u64) -> Result<u64, VerifyError> {
   let activation_block = match chain_id {
     LINEA_MAINNET_CHAIN_ID => constants::LINEA_MAINNET_ACTIVATION_BLOCK,
     LINEA_SEPOLIA_CHAIN_ID => constants::LINEA_SEPOLIA_ACTIVATION_BLOCK,
-    _ => panic!("Unsupported chain ID"),
+    _ => return Err(VerifyError::UnsupportedChainId(chain_id)),
   };
 
   if block_number <= activation_block {
-    panic!("Block number is at or before the activation block");
+    return Err(VerifyError::BlockAtOrBeforeActivation {
+      block_number,
+      activation_block,
+    });
   }
 
-  block_number - activation_block
+  Ok(block_number - activation_block)
 }
 
 /// Compute beacon_block_root using the same method as Maru:
@@ -68,8 +77,11 @@ pub fn compute_beacon_block_root(header: &BeaconHeader) -> B256 {
 /// Compute body hash using the same method as Maru:
 /// body = rlp([[attestation_sigs], execution_payload])
 /// body_root = keccak256(body)
+///
+/// The `prev_block_attestation` is the attestation for the previous slot.
+/// For slot 1 (the first slot), there is no previous attestation.
 pub fn compute_body_hash(
-  attestations: &[&Attestation],
+  prev_block_attestation: Option<&Attestation>,
   execution_payload: &ExecutionPayload,
 ) -> B256 {
   use alloy_rlp::BufMut;
@@ -79,7 +91,7 @@ pub fn compute_body_hash(
 
   // First element: list of attestation signatures (prevCommitSeals)
   let mut seals_list_buffer = Vec::new();
-  for attestation in attestations {
+  if let Some(attestation) = prev_block_attestation {
     // Each seal is a list containing just the signature bytes
     let mut seal_buffer = Vec::new();
     attestation.signature.as_ref().encode(&mut seal_buffer);

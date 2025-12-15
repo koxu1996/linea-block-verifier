@@ -1,6 +1,6 @@
 //! Network constants for Linea.
 
-use alloy_primitives::Address;
+use alloy_primitives::{Address, B256};
 
 /// Linea network identifier.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,6 +26,18 @@ pub const LINEA_SEPOLIA_SEQUENCER: Address = Address::new(hex_literal::hex!(
   "20e2654209c3f5a7b4728fb228778f1261f1013f"
 ));
 
+/// Mainnet genesis beacon block root (slot 0).
+/// This is the beacon_block_root for the activation block, used as parent_root for slot 1.
+pub const LINEA_MAINNET_GENESIS_BEACON_ROOT: B256 = B256::new(hex_literal::hex!(
+  "c05c72649c12578368f1ab42ebfcc4ea0f0d5b9501d64ef84078f8f40f825892"
+));
+
+/// Sepolia genesis beacon block root (slot 0).
+/// This is the beacon_block_root for the activation block, used as parent_root for slot 1.
+pub const LINEA_SEPOLIA_GENESIS_BEACON_ROOT: B256 = B256::new(hex_literal::hex!(
+  "551a114ec84d773a0834ff053a2b964e21cf99a578c9e26159cf791271ee88a2"
+));
+
 /// Get the chain ID for a network.
 pub fn get_chain_id(network: LineaNetwork) -> u64 {
   match network {
@@ -47,5 +59,14 @@ pub fn get_sequencer_address(network: LineaNetwork) -> Address {
   match network {
     LineaNetwork::Mainnet => LINEA_MAINNET_SEQUENCER,
     LineaNetwork::Sepolia => LINEA_SEPOLIA_SEQUENCER,
+  }
+}
+
+/// Get the genesis beacon block root (slot 0) for a network.
+/// This is used as parent_root for slot 1.
+pub fn get_genesis_beacon_root(network: LineaNetwork) -> B256 {
+  match network {
+    LineaNetwork::Mainnet => LINEA_MAINNET_GENESIS_BEACON_ROOT,
+    LineaNetwork::Sepolia => LINEA_SEPOLIA_GENESIS_BEACON_ROOT,
   }
 }

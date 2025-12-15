@@ -2,19 +2,34 @@
 
 extern crate alloc;
 
+use linea_proof_core::VerifyMode;
 use risc0_zkvm::guest::env;
 
 risc0_zkvm::guest::entry!(main);
 
 fn main() {
-  // Read bincode-serialized VerifyInput from host.
+  // Read verification mode from host.
+  let mode: VerifyMode = env::read();
+
+  // Read bincode-serialized input from host.
   let input_bytes = env::read_frame();
 
-  // Debug: print received length.
-  println!("Guest received {} bytes", input_bytes.len());
+  println!(
+    "Guest received {} bytes, mode: {:?}",
+    input_bytes.len(),
+    mode
+  );
 
-  // Deserialize and verify.
-  linea_proof_core::verify_from_bytes(&input_bytes).expect("verification failed");
-
-  println!("Verification passed!");
+  // Deserialize and verify based on mode.
+  match mode {
+    VerifyMode::BlockHash => {
+      linea_proof_core::verify_block_hash_from_bytes(&input_bytes)
+        .expect("block hash verification failed");
+      println!("Block hash verification passed!");
+    }
+    VerifyMode::FullHeader => {
+      linea_proof_core::verify_from_bytes(&input_bytes).expect("header verification failed");
+      println!("Full header verification passed!");
+    }
+  }
 }

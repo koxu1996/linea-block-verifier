@@ -1,5 +1,6 @@
 pub const RISC0_GUEST_ELF: &[u8] = include_bytes!(env!(concat!("R0_ELF_", "risc0-guest")));
 
+use linea_proof_host::VerifyMode;
 use risc0_zkvm::{ExecutorEnv, default_executor};
 use std::path::Path;
 
@@ -35,36 +36,97 @@ async fn main() -> anyhow::Result<()> {
     input
   };
 
-  println!(
-    "Validating Linea block number: {}",
-    input.input_header.number
-  );
+  let block_number = input.input_header.number;
+  let block_hash = input.input_header.hash_slow();
 
-  // Serialize with bincode.
-  let input_bytes = input.to_bytes();
-  println!("Input serialized to {} bytes", input_bytes.len());
+  println!("Validating Linea block number: {}", block_number);
+  println!("Block hash: {}", block_hash);
+  println!();
 
-  // Execute the guest code.
+  // =========================================================================
+  // Run BlockHash verification mode
+  // =========================================================================
+  println!("=== Mode 1: Block Hash Verification ===");
+
+  let block_hash_input = input.to_block_hash_input();
+  let block_hash_bytes = block_hash_input.to_bytes()?;
+  println!("BlockHash input: {} bytes", block_hash_bytes.len());
+
   let env = ExecutorEnv::builder()
     .segment_limit_po2(MAX_PO2)
-    .write_frame(&input_bytes)
+    .write(&VerifyMode::BlockHash)?
+    .write_frame(&block_hash_bytes)
     .build()?;
+
   let exec = default_executor();
-  println!("Generating traces...");
+  println!("Executing...");
   let start = std::time::Instant::now();
   let session_info = exec.execute(env, RISC0_GUEST_ELF)?;
-  let duration = start.elapsed();
-  println!(
-    "Traces ready - it took {:.2} seconds",
-    duration.as_secs_f64()
-  );
-  println!("- num segments: {}", session_info.segments.len());
-  println!("- total cycles: {}", session_info.cycles());
+  let block_hash_duration = start.elapsed();
 
+  let block_hash_cycles = session_info.cycles();
   println!(
-    "\nLinea block {} verified successfully in zkVM!",
-    input.input_header.number
+    "BlockHash verification: {:.2}s, {} cycles, {} segments",
+    block_hash_duration.as_secs_f64(),
+    block_hash_cycles,
+    session_info.segments.len()
   );
+
+  // =========================================================================
+  // Run FullHeader verification mode
+  // =========================================================================
+  println!();
+  println!("=== Mode 2: Full Header Verification ===");
+
+  let full_header_bytes = input.to_bytes()?;
+  println!("FullHeader input: {} bytes", full_header_bytes.len());
+
+  let env = ExecutorEnv::builder()
+    .segment_limit_po2(MAX_PO2)
+    .write(&VerifyMode::FullHeader)?
+    .write_frame(&full_header_bytes)
+    .build()?;
+
+  let exec = default_executor();
+  println!("Executing...");
+  let start = std::time::Instant::now();
+  let session_info = exec.execute(env, RISC0_GUEST_ELF)?;
+  let full_header_duration = start.elapsed();
+
+  let full_header_cycles = session_info.cycles();
+  println!(
+    "FullHeader verification: {:.2}s, {} cycles, {} segments",
+    full_header_duration.as_secs_f64(),
+    full_header_cycles,
+    session_info.segments.len()
+  );
+
+  // =========================================================================
+  // Summary
+  // =========================================================================
+  println!();
+  println!("=== Summary for block {} ===", block_number);
+  println!("Block hash: {}", block_hash);
+  println!();
+  println!(
+    "  BlockHash mode:   {:>12} cycles  ({:.2}s)",
+    block_hash_cycles,
+    block_hash_duration.as_secs_f64()
+  );
+  println!(
+    "  FullHeader mode:  {:>12} cycles  ({:.2}s)",
+    full_header_cycles,
+    full_header_duration.as_secs_f64()
+  );
+  println!();
+  let diff = full_header_cycles as i64 - block_hash_cycles as i64;
+  let diff_pct = (diff as f64 / block_hash_cycles as f64) * 100.0;
+  println!(
+    "  Difference:       {:>+12} cycles  ({:+.1}%)",
+    diff, diff_pct
+  );
+  println!();
+  println!("Both verification modes passed successfully!");
 
   Ok(())
 }

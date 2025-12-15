@@ -1,17 +1,23 @@
 [package]
 name = "linea-proof-core"
-version.workspace = true
-edition.workspace = true
+version = { workspace = true }
+edition = { workspace = true }
 
 [features]
 default = []
 std = ["serde", "hex", "alloy-primitives/serde", "alloy-consensus/serde", "bincode"]
 
 [dependencies]
-alloy-primitives.workspace = true
-alloy-consensus.workspace = true
-alloy-rlp.workspace = true
-hex-literal.workspace = true
+# Ethereum-based blockchains.
+alloy-primitives = { workspace = true }
+alloy-consensus = { workspace = true }
+alloy-rlp = { workspace = true }
+alloy-trie = { workspace = true }
+
+# Hex literal for compile-time hex parsing.
+hex-literal = { workspace = true }
+
+# Serialization (optional, std feature).
 serde = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 bincode = { version = "1.3", optional = true }

@@ -7,6 +7,13 @@ use core::fmt;
 /// Error type for header verification failures.
 #[derive(Debug)]
 pub enum VerifyError {
+  UnsupportedChainId(u64),
+  BlockAtOrBeforeActivation {
+    block_number: u64,
+    activation_block: u64,
+  },
+  InvalidSlotZero,
+  InvalidProposerAddress(String),
   UnsupportedVersion(String),
   BeaconSignatureNotEmpty,
   InvalidProposer {
@@ -70,7 +77,42 @@ pub enum VerifyError {
   },
   MissingBaseFeePerGas,
   ExtraDataMismatch,
+  PrevRandaoMismatch {
+    expected: B256,
+    got: B256,
+  },
+  TransactionsRootMismatch {
+    expected: B256,
+    got: B256,
+  },
+  PrevAttestationSignerMismatch {
+    expected: Address,
+    recovered: Address,
+  },
+  PrevAttestationBlockRootMismatch {
+    expected: B256,
+    got: B256,
+  },
+  NoPrevAttestation(u64),
+  /// Beacon header slot does not match block response slot.
+  BeaconSlotMismatch {
+    expected: u64,
+    got: u64,
+  },
+  /// Beacon header timestamp does not match execution payload timestamp.
+  BeaconTimestampMismatch {
+    expected: u64,
+    got: u64,
+  },
+  /// Beacon header parent_root does not match expected value.
+  BeaconParentRootMismatch {
+    expected: B256,
+    got: B256,
+  },
+  /// Block hash matches but a field differs - indicates a bug in Linea.
+  LineaBugDetected(String),
   DeserializationError,
+  SerializationError,
 }
 
 #[cfg(feature = "std")]
@@ -79,8 +121,34 @@ impl std::error::Error for VerifyError {}
 impl fmt::Display for VerifyError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
+      VerifyError::UnsupportedChainId(chain_id) => {
+        write!(f, "Unsupported chain ID: {}", chain_id)
+      }
+      VerifyError::BlockAtOrBeforeActivation {
+        block_number,
+        activation_block,
+      } => {
+        write!(
+          f,
+          "Block number {} is at or before activation block {}",
+          block_number, activation_block
+        )
+      }
+      VerifyError::InvalidSlotZero => {
+        write!(
+          f,
+          "Slot 0 is invalid: it represents the activation block which has no beacon data"
+        )
+      }
+      VerifyError::InvalidProposerAddress(addr) => {
+        write!(f, "Invalid proposer address in beacon block: {}", addr)
+      }
       VerifyError::UnsupportedVersion(version) => {
-        write!(f, "Unsupported beacon version: {}, expected 'maru'", version)
+        write!(
+          f,
+          "Unsupported beacon version: {}, expected 'maru'",
+          version
+        )
       }
       VerifyError::BeaconSignatureNotEmpty => {
         write!(f, "Expected empty beacon block signature")
@@ -177,8 +245,73 @@ impl fmt::Display for VerifyError {
       VerifyError::ExtraDataMismatch => {
         write!(f, "Extra data mismatch")
       }
+      VerifyError::PrevRandaoMismatch { expected, got } => {
+        write!(
+          f,
+          "Prev randao mismatch: expected {}, got {}",
+          expected, got
+        )
+      }
+      VerifyError::TransactionsRootMismatch { expected, got } => {
+        write!(
+          f,
+          "Transactions root mismatch: expected {}, got {}",
+          expected, got
+        )
+      }
+      VerifyError::PrevAttestationSignerMismatch {
+        expected,
+        recovered,
+      } => {
+        write!(
+          f,
+          "Previous attestation signer mismatch: expected {}, recovered {}",
+          expected, recovered
+        )
+      }
+      VerifyError::PrevAttestationBlockRootMismatch { expected, got } => {
+        write!(
+          f,
+          "Previous attestation block root mismatch: expected {}, got {}",
+          expected, got
+        )
+      }
+      VerifyError::NoPrevAttestation(slot) => {
+        write!(f, "No previous attestation found for slot {}", slot)
+      }
+      VerifyError::BeaconSlotMismatch { expected, got } => {
+        write!(
+          f,
+          "Beacon header slot mismatch: expected {}, got {}",
+          expected, got
+        )
+      }
+      VerifyError::BeaconTimestampMismatch { expected, got } => {
+        write!(
+          f,
+          "Beacon header timestamp mismatch: expected {}, got {}",
+          expected, got
+        )
+      }
+      VerifyError::BeaconParentRootMismatch { expected, got } => {
+        write!(
+          f,
+          "Beacon header parent_root mismatch: expected {}, got {}",
+          expected, got
+        )
+      }
+      VerifyError::LineaBugDetected(details) => {
+        write!(
+          f,
+          "Linea bug detected: block hash matches but field differs: {}",
+          details
+        )
+      }
       VerifyError::DeserializationError => {
         write!(f, "Failed to deserialize input")
+      }
+      VerifyError::SerializationError => {
+        write!(f, "Failed to serialize input")
       }
     }
   }

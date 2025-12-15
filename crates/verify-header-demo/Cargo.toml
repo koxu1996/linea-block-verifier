@@ -1,14 +1,25 @@
 [package]
 name = "verify-header-demo"
-version.workspace = true
-edition.workspace = true
+version = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
-linea-proof-core.workspace = true
-linea-proof-host.workspace = true
-tokio.workspace = true
-color-eyre.workspace = true
-alloy-provider.workspace = true
-alloy-rpc-types.workspace = true
-serde_json.workspace = true
+# Workspace crates.
+linea-proof-core = { workspace = true }
+linea-proof-host = { workspace = true }
+
+# Asynchronous runtime.
+tokio = { workspace = true }
+
+# Error handling.
+color-eyre = { workspace = true }
+
+# Ethereum-based blockchains.
+alloy-provider = { workspace = true }
+alloy-rpc-types = { workspace = true }
+
+# JSON parsing.
+serde_json = { workspace = true }
+
+# Command-line argument parsing.
 clap = { version = "4", features = ["derive"] }

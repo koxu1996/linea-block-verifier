@@ -24,6 +24,7 @@ alloy-primitives = { version = "1.1", default-features = false, features = ["rlp
 alloy-rpc-types = { version = "1.1", default-features = false, features = ["eth"] }
 alloy-eips = { version = "1.1", default-features = false }
 alloy-rlp = { version = "0.3", default-features = false }
+alloy-trie = { version = "0.8", default-features = false }
 
 # HTTP client and JSON parsing.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

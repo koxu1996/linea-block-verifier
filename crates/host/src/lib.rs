@@ -20,8 +20,9 @@ pub use rpc::{
 pub use linea_proof_core::{
   Attestation, AttestationData, BeaconBlock, BeaconBlockBody, BeaconHeader, BlockData,
   BlockResponse, ExecutionPayload, HeaderData, HeaderResponse, LINEA_MAINNET_CHAIN_ID,
-  LINEA_SEPOLIA_CHAIN_ID, LineaNetwork, VerifyError, VerifyInput, beacon_slot_from_block_number,
-  get_chain_id, get_sequencer_address, verify_from_bytes, verify_header,
+  LINEA_SEPOLIA_CHAIN_ID, LineaNetwork, VerifyBlockHashInput, VerifyError, VerifyInput, VerifyMode,
+  beacon_slot_from_block_number, get_chain_id, get_sequencer_address, verify_block_hash,
+  verify_block_hash_from_bytes, verify_from_bytes, verify_header,
 };
 
 /// Create a `VerifyInput` from the most recent block on Linea Sepolia.
@@ -44,7 +45,7 @@ pub async fn create_verify_input_for_network(network: LineaNetwork) -> eyre::Res
   let latest_block = provider
     .get_block_by_number(BlockNumberOrTag::Latest)
     .await?
-    .expect("latest block should exist");
+    .ok_or_else(|| eyre::eyre!("latest block should exist"))?;
   let header = latest_block.header.inner;
 
   let beacon_client = BeaconClient::new(cl_rpc, network);
@@ -60,7 +61,7 @@ pub fn load_verify_input_from_file(path: &std::path::Path) -> eyre::Result<Verif
 
 /// Save a `VerifyInput` to a file as serialized bytes.
 pub fn save_verify_input_to_file(input: &VerifyInput, path: &std::path::Path) -> eyre::Result<()> {
-  let bytes = input.to_bytes();
+  let bytes = input.to_bytes()?;
   std::fs::write(path, bytes)?;
   Ok(())
 }
@@ -74,7 +75,7 @@ mod tests {
     let input = create_verify_input().await.expect("should fetch input");
 
     // Serialize to bytes.
-    let bytes = input.to_bytes();
+    let bytes = input.to_bytes().expect("should serialize");
     println!("Serialized to {} bytes", bytes.len());
 
     // Deserialize back.
@@ -87,5 +88,71 @@ mod tests {
       input.block_response.data.message.slot,
       restored.block_response.data.message.slot
     );
+  }
+
+  mod genesis_beacon_root {
+    use crate::{BeaconClient, LineaNetwork, get_linea_cl_http_rpc};
+    use linea_proof_core::{
+      LINEA_MAINNET_GENESIS_BEACON_ROOT, LINEA_SEPOLIA_GENESIS_BEACON_ROOT,
+      compute_beacon_block_root,
+    };
+
+    /// Fetches slot 0 beacon header and computes its beacon_block_root.
+    /// Verifies it matches the genesis beacon root constant.
+    #[::tokio::test]
+    async fn test_mainnet_genesis_beacon_root() {
+      let cl_rpc = get_linea_cl_http_rpc(LineaNetwork::Mainnet);
+      let beacon_client = BeaconClient::new(cl_rpc, LineaNetwork::Mainnet);
+
+      // Fetch slot 0 header
+      let header_response = beacon_client
+        .get_header(0)
+        .await
+        .expect("should fetch slot 0 header");
+
+      // Compute beacon block root from the header
+      let computed_root = compute_beacon_block_root(&header_response.data.message);
+
+      // Verify it matches the constant
+      assert_eq!(
+        computed_root, LINEA_MAINNET_GENESIS_BEACON_ROOT,
+        "Mainnet genesis beacon root mismatch: computed {}, expected {}",
+        computed_root, LINEA_MAINNET_GENESIS_BEACON_ROOT
+      );
+
+      println!(
+        "Mainnet genesis beacon root verified: {}",
+        LINEA_MAINNET_GENESIS_BEACON_ROOT
+      );
+    }
+
+    /// Fetches slot 0 beacon header and computes its beacon_block_root.
+    /// Verifies it matches the genesis beacon root constant.
+    #[::tokio::test]
+    async fn test_sepolia_genesis_beacon_root() {
+      let cl_rpc = get_linea_cl_http_rpc(LineaNetwork::Sepolia);
+      let beacon_client = BeaconClient::new(cl_rpc, LineaNetwork::Sepolia);
+
+      // Fetch slot 0 header
+      let header_response = beacon_client
+        .get_header(0)
+        .await
+        .expect("should fetch slot 0 header");
+
+      // Compute beacon block root from the header
+      let computed_root = compute_beacon_block_root(&header_response.data.message);
+
+      // Verify it matches the constant
+      assert_eq!(
+        computed_root, LINEA_SEPOLIA_GENESIS_BEACON_ROOT,
+        "Sepolia genesis beacon root mismatch: computed {}, expected {}",
+        computed_root, LINEA_SEPOLIA_GENESIS_BEACON_ROOT
+      );
+
+      println!(
+        "Sepolia genesis beacon root verified: {}",
+        LINEA_SEPOLIA_GENESIS_BEACON_ROOT
+      );
+    }
   }
 }

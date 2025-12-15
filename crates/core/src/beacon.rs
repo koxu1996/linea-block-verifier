@@ -293,6 +293,7 @@ pub struct ExecutionPayload {
       deserialize_with = "deserialize_u64_from_string"
     )
   )]
+  /// NOTE: In standard Ethereum this is optional (post-London), but Maru always provides it.
   pub base_fee_per_gas: u64,
   #[cfg_attr(
     feature = "std",
