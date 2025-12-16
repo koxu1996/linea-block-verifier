@@ -35,7 +35,7 @@ pub enum UserInput {
   /// Verify only the block hash (faster, smaller input).
   BlockHash(B256),
   /// Verify the full header with Linea bug detection.
-  Header(Header),
+  Header(Box<Header>),
 }
 
 /// Complete zkVM verification input.
@@ -66,7 +66,7 @@ impl VerifyInput {
   /// Create a new verification input for a full header.
   pub fn new_header(header: Header, beacon_data: BeaconData, network: LineaNetwork) -> Self {
     Self {
-      user_input: UserInput::Header(header),
+      user_input: UserInput::Header(Box::new(header)),
       beacon_data,
       network,
     }
