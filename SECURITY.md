@@ -21,42 +21,47 @@ The verifier proves that a Linea block hash (or full header) was signed by the L
 The verification builds a chain of cryptographic commitments from the sequencer's ECDSA signature down to the user's block hash:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  CURRENT ATTESTATION SIGNATURE (Step 9)                                     │
-│                                                                             │
-│  attestation.signature ──► recover_address() ══► must equal SEQUENCER      │
-│  attestation.data.beacon_block_root ◄───────────────────────────────────────│
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ must equal (Step 10)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  BEACON BLOCK ROOT                                                          │
-│                                                                             │
-│  computed = keccak256(rlp([slot, round, timestamp, [proposer],              │
-│                            parent_root, state_root, body_root]))            │
-│                                    │                                        │
-│  beacon_header.body_root ◄─────────│                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ must equal (Step 4)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  BODY HASH                                                                  │
-│                                                                             │
-│  computed = keccak256(rlp([[prev_attestation.signature],                    │
-│                             execution_payload]))                            │
-│                                    │                                        │
-│  execution_payload.block_hash ◄────│                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ must equal (Step 11)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  USER INPUT                                                                 │
-│                                                                             │
-│  user's block_hash (or computed from user's header via hash_slow())         │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ATTESTATION SIGNATURE (Step 9)                                         │
+│                                                                         │
+│  The sequencer signs beacon_block_root with ECDSA.                      │
+│  We recover the signer address and verify it equals SEQUENCER.          │
+│                                                                         │
+│  Output: attestation.data.beacon_block_root                             │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     │ must equal
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BEACON BLOCK ROOT (Step 10)                                            │
+│                                                                         │
+│  Compute: keccak256(rlp([slot, round, timestamp, [proposer],            │
+│                          parent_root, state_root, body_root]))          │
+│                                                                         │
+│  Output: beacon_header.body_root                                        │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     │ must equal
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BODY HASH (Step 4)                                                     │
+│                                                                         │
+│  Compute: keccak256(rlp([[prev_attestation.signature],                  │
+│                          execution_payload]))                           │
+│                                                                         │
+│  Output: execution_payload.block_hash                                   │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     │ must equal
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│  USER INPUT (Step 11)                                                   │
+│                                                                         │
+│  The block_hash provided by user (or computed from header).             │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key insight**: Each arrow represents a cryptographic commitment. If any link is broken, the verification fails. Only the Linea sequencer can produce a valid chain.
+Each arrow is a cryptographic commitment. If any link breaks, verification fails. Only the Linea sequencer can produce a valid chain.
 
 ---
 
