@@ -8,6 +8,7 @@ default = []
 std = ["serde", "hex", "alloy-primitives/serde", "alloy-consensus/serde", "bincode"]
 
 [dependencies]
+
 # Ethereum-based blockchains.
 alloy-primitives = { workspace = true }
 alloy-consensus = { workspace = true }

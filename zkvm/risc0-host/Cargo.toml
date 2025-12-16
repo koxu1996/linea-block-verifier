@@ -6,11 +6,23 @@ edition = "2024"
 [workspace]
 
 [dependencies]
-linea-block-verifier = { path = "../../crates/linea-block-verifier", features = ["host"] }
-risc0-zkvm = "3.0.3"
+
+# Asynchronous runtime.
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+# Eror handling.
 anyhow = "1.0"
+
+# Linea block verification.
+linea-block-verifier = { path = "../../crates/linea-block-verifier", features = ["host"] }
+
+# Logging.
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# zkVM.
+risc0-zkvm = "3.0.3"
+
 [build-dependencies]
+
+# zkVM.
 risc0-build = { git = "https://github.com/koxu1996/risc0.git", branch = "feature/simpler-guest-integration-v3.0.3" }

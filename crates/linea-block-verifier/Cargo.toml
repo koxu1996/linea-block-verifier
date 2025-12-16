@@ -10,5 +10,7 @@ std = ["linea-proof-core/std"]
 host = ["std", "dep:linea-proof-host"]
 
 [dependencies]
+
+# Linea block verification.
 linea-proof-core = { workspace = true }
 linea-proof-host = { workspace = true, optional = true }

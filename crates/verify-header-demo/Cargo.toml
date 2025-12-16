@@ -4,6 +4,7 @@ version = { workspace = true }
 edition = { workspace = true }
 
 [dependencies]
+
 # Workspace crates.
 linea-block-verifier = { workspace = true, features = ["host"] }
 

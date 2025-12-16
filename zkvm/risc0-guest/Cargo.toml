@@ -6,7 +6,11 @@ edition = "2024"
 [workspace]
 
 [dependencies]
+
+# Linea block verification.
 linea-block-verifier = { path = "../../crates/linea-block-verifier", features = ["std"] }
+
+# zkVM.
 risc0-zkvm = { version = "3.0.3", default-features = false, features = ["std", "unstable"] }
 
 [patch.crates-io]
