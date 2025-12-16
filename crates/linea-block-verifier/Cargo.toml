@@ -8,7 +8,6 @@ description = "Unified API for Linea block verification"
 default = []
 std = ["linea-proof-core/std"]
 host = ["std", "dep:linea-proof-host"]
-full = ["host"]
 
 [dependencies]
 linea-proof-core = { workspace = true }
