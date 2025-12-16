@@ -2,7 +2,10 @@
 
 use alloy_consensus::Header;
 use color_eyre::eyre::{self, bail};
-use linea_proof_core::{LineaNetwork, VerifyInput, beacon_slot_from_block_number, get_chain_id};
+use linea_proof_core::beacon_slot_from_block_number;
+use linea_proof_core::constants::{LineaNetwork, get_chain_id};
+use linea_proof_core::types::{BeaconBlockResponse, BeaconHeaderResponse};
+use linea_proof_core::zkvm::VerifyInput;
 use serde::Deserialize;
 
 /// Error response from the beacon API.
@@ -29,7 +32,7 @@ impl Client {
   }
 
   /// Fetch beacon block header response for a given slot.
-  pub async fn get_header(&self, slot: u64) -> eyre::Result<linea_proof_core::HeaderResponse> {
+  pub async fn get_header(&self, slot: u64) -> eyre::Result<BeaconHeaderResponse> {
     let url = format!("{}/eth/v1/beacon/headers/{}", self.base_url, slot);
     let response = self.http.get(&url).send().await?;
 
@@ -42,7 +45,7 @@ impl Client {
   }
 
   /// Fetch full beacon block response for a given slot.
-  pub async fn get_block(&self, slot: u64) -> eyre::Result<linea_proof_core::BlockResponse> {
+  pub async fn get_block(&self, slot: u64) -> eyre::Result<BeaconBlockResponse> {
     let url = format!("{}/eth/v2/beacon/blocks/{}", self.base_url, slot);
     let response = self.http.get(&url).send().await?;
 

@@ -11,9 +11,9 @@ use alloy_consensus::Header;
 use alloy_primitives::{Address, B256, Signature};
 use alloy_rlp::Encodable;
 
-use crate::beacon::{Attestation, BlockResponse, ExecutionPayload, HeaderResponse};
 use crate::constants::{LineaNetwork, get_genesis_beacon_root, get_sequencer_address};
 use crate::error::VerifyError;
+use crate::types::{Attestation, BeaconBlockResponse, BeaconHeaderResponse, ExecutionPayload};
 use crate::{compute_beacon_block_root, compute_body_hash};
 
 /// Verifies that a block hash is authentic by checking it against the Linea beacon chain data.
@@ -22,8 +22,8 @@ use crate::{compute_beacon_block_root, compute_body_hash};
 /// It proves that the given block hash was signed by the Linea sequencer.
 pub fn verify_block_hash(
   block_hash: B256,
-  block_response: &BlockResponse,
-  header_response: &HeaderResponse,
+  block_response: &BeaconBlockResponse,
+  header_response: &BeaconHeaderResponse,
   network: LineaNetwork,
 ) -> Result<(), VerifyError> {
   // Validate beacon data and get trusted execution payload
@@ -46,8 +46,8 @@ pub fn verify_block_hash(
 /// If the block hash matches but fields differ, it indicates a bug in Linea (LineaBugDetected).
 pub fn verify_header(
   input_header: &Header,
-  block_response: &BlockResponse,
-  header_response: &HeaderResponse,
+  block_response: &BeaconBlockResponse,
+  header_response: &BeaconHeaderResponse,
   network: LineaNetwork,
 ) -> Result<(), VerifyError> {
   // Validate beacon data and get trusted execution payload
@@ -84,8 +84,8 @@ pub fn verify_header(
 /// 5. Current attestation validation
 /// 6. Beacon block root validation
 fn verify_beacon_data<'a>(
-  block_response: &'a BlockResponse,
-  header_response: &HeaderResponse,
+  block_response: &'a BeaconBlockResponse,
+  header_response: &BeaconHeaderResponse,
   network: LineaNetwork,
 ) -> Result<&'a ExecutionPayload, VerifyError> {
   let sequencer = get_sequencer_address(network);

@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use linea_block_verifier::core::{
+use linea_block_verifier::core::zkvm::{
   VerifyMode, verify_block_hash_from_bytes, verify_from_bytes,
 };
 use risc0_zkvm::guest::env;

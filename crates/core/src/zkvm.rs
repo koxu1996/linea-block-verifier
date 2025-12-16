@@ -9,9 +9,9 @@ use alloy_consensus::Header;
 use alloy_primitives::B256;
 use serde::{Deserialize, Serialize};
 
-use crate::beacon::{BlockResponse, HeaderResponse};
 use crate::constants::LineaNetwork;
 use crate::error::VerifyError;
+use crate::types::{BeaconBlockResponse, BeaconHeaderResponse};
 use crate::verify::{verify_block_hash, verify_header};
 
 /// Verification mode for zkVM.
@@ -32,9 +32,9 @@ pub struct VerifyBlockHashInput {
   /// The block hash to verify.
   pub block_hash: B256,
   /// The beacon block response.
-  pub block_response: BlockResponse,
+  pub block_response: BeaconBlockResponse,
   /// The beacon header response.
-  pub header_response: HeaderResponse,
+  pub header_response: BeaconHeaderResponse,
   /// The network.
   pub network: LineaNetwork,
 }
@@ -43,8 +43,8 @@ impl VerifyBlockHashInput {
   /// Create a new block hash verification input.
   pub fn new(
     block_hash: B256,
-    block_response: BlockResponse,
-    header_response: HeaderResponse,
+    block_response: BeaconBlockResponse,
+    header_response: BeaconHeaderResponse,
     network: LineaNetwork,
   ) -> Self {
     Self {
@@ -91,9 +91,9 @@ pub struct VerifyInput {
   /// The execution layer header.
   pub input_header: Header,
   /// The beacon block response.
-  pub block_response: BlockResponse,
+  pub block_response: BeaconBlockResponse,
   /// The beacon header response.
-  pub header_response: HeaderResponse,
+  pub header_response: BeaconHeaderResponse,
   /// The network.
   pub network: LineaNetwork,
 }
@@ -102,8 +102,8 @@ impl VerifyInput {
   /// Create a new verification input from the component parts.
   pub fn new(
     input_header: Header,
-    block_response: BlockResponse,
-    header_response: HeaderResponse,
+    block_response: BeaconBlockResponse,
+    header_response: BeaconHeaderResponse,
     network: LineaNetwork,
   ) -> Self {
     Self {

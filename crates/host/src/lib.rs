@@ -4,26 +4,15 @@
 //! (outside of zkVM). It provides beacon chain client and RPC utilities.
 
 mod beacon;
-mod rpc;
+pub mod rpc;
 
 use alloy_eips::BlockNumberOrTag;
 use alloy_provider::Provider;
 use color_eyre::eyre;
+use linea_proof_core::constants::LineaNetwork;
+use linea_proof_core::zkvm::VerifyInput;
 
 pub use beacon::Client as BeaconClient;
-pub use rpc::{
-  LINEA_CL_HTTP_RPC_MAINNET, LINEA_CL_HTTP_RPC_SEPOLIA, LINEA_EL_HTTP_RPC_MAINNET,
-  LINEA_EL_HTTP_RPC_SEPOLIA, get_linea_cl_http_rpc, get_linea_el_http_rpc,
-};
-
-// Re-export core types for convenience
-pub use linea_proof_core::{
-  Attestation, AttestationData, BeaconBlock, BeaconBlockBody, BeaconHeader, BlockData,
-  BlockResponse, ExecutionPayload, HeaderData, HeaderResponse, LINEA_MAINNET_CHAIN_ID,
-  LINEA_SEPOLIA_CHAIN_ID, LineaNetwork, VerifyBlockHashInput, VerifyError, VerifyInput, VerifyMode,
-  beacon_slot_from_block_number, get_chain_id, get_sequencer_address, verify_block_hash,
-  verify_block_hash_from_bytes, verify_from_bytes, verify_header,
-};
 
 /// Create a `VerifyInput` from the most recent block on Linea Sepolia.
 ///
@@ -35,8 +24,8 @@ pub async fn create_verify_input() -> eyre::Result<VerifyInput> {
 
 /// Create a `VerifyInput` from the most recent block on the specified network.
 pub async fn create_verify_input_for_network(network: LineaNetwork) -> eyre::Result<VerifyInput> {
-  let el_rpc = get_linea_el_http_rpc(network);
-  let cl_rpc = get_linea_cl_http_rpc(network);
+  let el_rpc = rpc::get_linea_el_http_rpc(network);
+  let cl_rpc = rpc::get_linea_cl_http_rpc(network);
 
   let rpc_url = el_rpc.try_into()?;
   let provider: alloy_provider::RootProvider<alloy_provider::network::Ethereum> =
@@ -68,7 +57,7 @@ pub fn save_verify_input_to_file(input: &VerifyInput, path: &std::path::Path) ->
 
 #[cfg(test)]
 mod tests {
-  use crate::{VerifyInput, create_verify_input};
+  use super::*;
 
   #[::tokio::test]
   async fn test_verify_input_roundtrip() {
@@ -91,17 +80,17 @@ mod tests {
   }
 
   mod genesis_beacon_root {
-    use crate::{BeaconClient, LineaNetwork, get_linea_cl_http_rpc};
-    use linea_proof_core::{
+    use super::*;
+    use linea_proof_core::compute_beacon_block_root;
+    use linea_proof_core::constants::{
       LINEA_MAINNET_GENESIS_BEACON_ROOT, LINEA_SEPOLIA_GENESIS_BEACON_ROOT,
-      compute_beacon_block_root,
     };
 
     /// Fetches slot 0 beacon header and computes its beacon_block_root.
     /// Verifies it matches the genesis beacon root constant.
     #[::tokio::test]
     async fn test_mainnet_genesis_beacon_root() {
-      let cl_rpc = get_linea_cl_http_rpc(LineaNetwork::Mainnet);
+      let cl_rpc = rpc::get_linea_cl_http_rpc(LineaNetwork::Mainnet);
       let beacon_client = BeaconClient::new(cl_rpc, LineaNetwork::Mainnet);
 
       // Fetch slot 0 header
@@ -130,7 +119,7 @@ mod tests {
     /// Verifies it matches the genesis beacon root constant.
     #[::tokio::test]
     async fn test_sepolia_genesis_beacon_root() {
-      let cl_rpc = get_linea_cl_http_rpc(LineaNetwork::Sepolia);
+      let cl_rpc = rpc::get_linea_cl_http_rpc(LineaNetwork::Sepolia);
       let beacon_client = BeaconClient::new(cl_rpc, LineaNetwork::Sepolia);
 
       // Fetch slot 0 header

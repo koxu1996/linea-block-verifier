@@ -1,6 +1,6 @@
 //! RPC endpoint configuration.
 
-use linea_proof_core::LineaNetwork;
+use linea_proof_core::constants::LineaNetwork;
 
 // Our Besu node, running on `c3.large.x86` instance.
 pub const LINEA_EL_HTTP_RPC_MAINNET: &str = "http://185.26.8.113:10545";

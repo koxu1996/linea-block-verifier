@@ -1,6 +1,6 @@
-//! Beacon chain types for Linea.
+//! Types for Linea block verification.
 //!
-//! These types represent the beacon chain data structures.
+//! This module contains beacon chain data structures used for verification.
 //! When the `std` feature is enabled, serde serialization/deserialization is available.
 
 use alloc::string::String;
@@ -321,29 +321,29 @@ pub struct ExecutionPayload {
 /// Response wrapper for beacon header API.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct HeaderResponse {
-  pub data: HeaderData,
+pub struct BeaconHeaderResponse {
+  pub data: BeaconHeaderData,
 }
 
 /// Header data wrapper.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct HeaderData {
+pub struct BeaconHeaderData {
   pub message: BeaconHeader,
 }
 
 /// Response wrapper for beacon block API.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct BlockResponse {
+pub struct BeaconBlockResponse {
   pub version: String,
-  pub data: BlockData,
+  pub data: BeaconBlockData,
 }
 
 /// Block data wrapper (contains both message and signature).
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct BlockData {
+pub struct BeaconBlockData {
   pub message: BeaconBlock,
   #[cfg_attr(
     feature = "std",

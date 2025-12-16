@@ -2,10 +2,10 @@ use alloy_provider::Provider;
 use clap::Parser;
 use color_eyre::eyre;
 
-use linea_block_verifier::core::{LineaNetwork, verify_header};
-use linea_block_verifier::host::{
-  BeaconClient, get_chain_id, get_linea_cl_http_rpc, get_linea_el_http_rpc,
-};
+use linea_block_verifier::core::constants::{LineaNetwork, get_chain_id};
+use linea_block_verifier::core::verify_header;
+use linea_block_verifier::host::BeaconClient;
+use linea_block_verifier::host::rpc::{get_linea_cl_http_rpc, get_linea_el_http_rpc};
 
 mod cli;
 use cli::{Args, Command, commands};

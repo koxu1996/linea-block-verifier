@@ -1,6 +1,6 @@
 pub const RISC0_GUEST_ELF: &[u8] = include_bytes!(env!(concat!("R0_ELF_", "risc0-guest")));
 
-use linea_block_verifier::core::VerifyMode;
+use linea_block_verifier::core::zkvm::VerifyMode;
 use linea_block_verifier::host::{
   create_verify_input, load_verify_input_from_file, save_verify_input_to_file,
 };
@@ -33,8 +33,7 @@ async fn main() -> anyhow::Result<()> {
     let input = create_verify_input()
       .await
       .map_err(|e| anyhow::anyhow!("{e}"))?;
-    save_verify_input_to_file(&input, input_path)
-      .map_err(|e| anyhow::anyhow!("{e}"))?;
+    save_verify_input_to_file(&input, input_path).map_err(|e| anyhow::anyhow!("{e}"))?;
     println!("Saved input to {}", INPUT_FILE);
     input
   };
