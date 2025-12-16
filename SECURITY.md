@@ -1,4 +1,4 @@
-# Security Model & Verification Logic
+# Security Model & Verification Workflow
 
 This document describes the cryptographic verification flow and security model for the Linea Block Verifier.
 
@@ -6,10 +6,9 @@ This document describes the cryptographic verification flow and security model f
 
 1. [Overview](#overview)
 2. [Trust Model](#trust-model)
-3. [Cryptographic Chain of Trust](#cryptographic-chain-of-trust)
-4. [Verification Steps](#verification-steps)
+3. [Verification Workflow](#verification-workflow)
+4. [Verification Modes](#verification-modes)
 5. [Attack Surface Analysis](#attack-surface-analysis)
-6. [Verification Modes](#verification-modes)
 
 ---
 
@@ -19,7 +18,45 @@ The verifier proves that a Linea block hash (or full header) was signed by the L
 
 > **If we can prove that the Linea sequencer signed a beacon_block_root, and we can cryptographically link that root to a specific block hash, then the block hash is authentic.**
 
-The verification builds a chain of cryptographic commitments from the sequencer's ECDSA signature down to the user's block hash.
+The verification builds a chain of cryptographic commitments from the sequencer's ECDSA signature down to the user's block hash:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CURRENT ATTESTATION SIGNATURE (Step 9)                                     │
+│                                                                             │
+│  attestation.signature ──► recover_address() ══► must equal SEQUENCER      │
+│  attestation.data.beacon_block_root ◄───────────────────────────────────────│
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ must equal (Step 10)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  BEACON BLOCK ROOT                                                          │
+│                                                                             │
+│  computed = keccak256(rlp([slot, round, timestamp, [proposer],              │
+│                            parent_root, state_root, body_root]))            │
+│                                    │                                        │
+│  beacon_header.body_root ◄─────────│                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ must equal (Step 4)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  BODY HASH                                                                  │
+│                                                                             │
+│  computed = keccak256(rlp([[prev_attestation.signature],                    │
+│                             execution_payload]))                            │
+│                                    │                                        │
+│  execution_payload.block_hash ◄────│                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ must equal (Step 11)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  USER INPUT                                                                 │
+│                                                                             │
+│  user's block_hash (or computed from user's header via hash_slow())         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Key insight**: Each arrow represents a cryptographic commitment. If any link is broken, the verification fails. Only the Linea sequencer can produce a valid chain.
 
 ---
 
@@ -37,123 +74,115 @@ Only these values are hardcoded and must be trusted:
 
 ### Untrusted Inputs
 
-Everything else comes from untrusted sources (RPC responses) and is validated cryptographically:
+Everything else comes from untrusted sources and is validated cryptographically:
 
-- `BlockResponse` - Contains beacon block with attestations and execution payload
-- `HeaderResponse` - Contains beacon header
-- User's block hash or header - What we're verifying
+| Input | Source | Trust Level |
+|-------|--------|-------------|
+| `BlockResponse` | Beacon RPC `/eth/v2/beacon/blocks/{slot}` | Untrusted |
+| `HeaderResponse` | Beacon RPC `/eth/v1/beacon/headers/{slot}` | Untrusted |
+| `block_hash` or `Header` | User input | What we're verifying |
+| `network` | Caller specifies | Determines which constants to use |
 
 The RPC can only affect **availability** (refuse to respond), not **integrity** (cannot forge valid data).
 
 ---
 
-## Cryptographic Chain of Trust
-
-The verification establishes trust through this chain:
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 9: CURRENT ATTESTATION SIGNATURE                                      │
-│                                                                             │
-│  attestation.signature ──► recover_address() ══► must equal SEQUENCER      │
-│  attestation.data.beacon_block_root ◄───────────────────────────────────────│
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ must equal (Step 10)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 10: BEACON BLOCK ROOT                                                 │
-│                                                                             │
-│  computed = keccak256(rlp([slot, round, timestamp, [proposer],              │
-│                            parent_root, state_root, body_root]))            │
-│                                    │                                        │
-│  beacon_header.body_root ◄─────────│                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ must equal (Step 4)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 4: BODY HASH                                                          │
-│                                                                             │
-│  computed = keccak256(rlp([[prev_attestation.signature],                    │
-│                             execution_payload]))                            │
-│                                    │                                        │
-│  execution_payload.block_hash ◄────│                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼ must equal (Step 11)
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 11: USER INPUT                                                        │
-│                                                                             │
-│  user's block_hash (or computed from user's header via hash_slow())         │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Key insight**: Each arrow represents a cryptographic commitment. If any link is broken, the verification fails. Only the Linea sequencer can produce a valid chain.
-
----
-
-## Verification Steps
+## Verification Workflow
 
 The verification performs 11 steps (numbered 0-10 in code, plus final user input check):
 
 ### Step 0: RPC Sanity Checks
 
-Before cryptographic validation, basic sanity checks on RPC response:
+Basic validation of the RPC response format:
 
-| Check | Validation | Error |
-|-------|------------|-------|
-| Version | `block_response.version == "maru"` | `UnsupportedVersion` |
-| Block Signature | `block_response.data.signature.is_empty()` | `BeaconSignatureNotEmpty` |
-| Proposer | `beacon_block.proposer_index == sequencer` | `InvalidProposer` |
+```rust
+// Version must be "maru"
+if block_response.version != "maru" {
+    return Err(UnsupportedVersion);
+}
 
-**Why?** Ensures we're talking to a Maru consensus node and the proposer is the expected sequencer.
+// Linea doesn't use BLS signatures, so this should be empty
+if !block_response.data.signature.is_empty() {
+    return Err(BeaconSignatureNotEmpty);
+}
+
+// Proposer must be the expected sequencer
+let proposer: Address = beacon_block.proposer_index.parse()?;
+if proposer != sequencer {
+    return Err(InvalidProposer);
+}
+```
 
 ### Step 1: Slot Validation
 
 ```rust
+let target_slot = beacon_block.slot;
+
+// Slot 0 is the activation block - no beacon data exists for it
 if target_slot == 0 {
     return Err(InvalidSlotZero);
 }
 ```
 
-**Why?** Slot 0 is the activation block itself, which has no beacon data to verify.
-
 ### Step 2: Find Previous Attestation
 
-For slots > 1, find the attestation for the previous slot:
+For slots > 1, locate the attestation for the previous slot:
 
 ```rust
-let prev_attestation = beacon_block.body.attestations
-    .find(|att| att.data.slot == target_slot - 1);
+let prev_attestation = if target_slot > 1 {
+    Some(
+        beacon_block.body.attestations
+            .iter()
+            .find(|att| att.data.slot == target_slot - 1)
+            .ok_or(NoPrevAttestation)?
+    )
+} else {
+    None  // Slot 1 has no previous attestation
+};
 ```
-
-**Why?** The previous attestation's signature is included in the body hash (chain continuity).
 
 ### Step 3: Previous Attestation Signature
 
+Verify the previous attestation was signed by the Linea sequencer (chain continuity):
+
 ```rust
-verify_attestation_signature(prev_attestation, sequencer, Previous)?;
+if let Some(attestation) = prev_attestation {
+    let signature = Signature::try_from(attestation.signature.as_ref())?;
+    let recovered = signature.recover_address_from_prehash(
+        &attestation.data.beacon_block_root
+    )?;
+
+    if recovered != sequencer {
+        return Err(PrevAttestationSignerMismatch);
+    }
+}
 ```
-
-Recovers the signer from the ECDSA signature and verifies it matches the sequencer.
-
-**Why?** Ensures chain continuity - the previous block was also signed by the sequencer.
 
 ### Step 4: Body Hash Validation
 
+Compute the body hash and verify it matches `beacon_header.body_root`:
+
 ```rust
-let computed = compute_body_hash(prev_attestation, &execution_payload);
-if computed != beacon_header.body_root {
+let computed_body_hash = compute_body_hash(
+    prev_attestation,
+    &beacon_block.body.execution_payload
+);
+
+if computed_body_hash != beacon_header.body_root {
     return Err(BodyHashMismatch);
 }
 ```
 
-Body hash computation:
+Body hash formula:
 ```
-body = rlp([[prev_attestation.signature], execution_payload])
-body_root = keccak256(body)
+body = rlp([
+    [prev_attestation.signature],  // Empty list for slot 1
+    execution_payload
+])
+body_hash = keccak256(body)
 ```
 
-**Why?** Links the execution payload (containing block_hash) to the beacon header.
+**At this point**: The `ExecutionPayload` is cryptographically linked to `BeaconHeader.body_root`.
 
 ### Step 5: Beacon Header Slot
 
@@ -163,22 +192,21 @@ if beacon_header.slot != target_slot {
 }
 ```
 
-**Why?** Ensures the header corresponds to the correct slot.
-
 ### Step 6: Beacon Header Parent Root
 
+Verify chain linkage via `parent_root`:
+
 ```rust
-let expected_parent = if target_slot == 1 {
+let expected_parent_root = if target_slot == 1 {
     get_genesis_beacon_root(network)  // Hardcoded constant
 } else {
-    prev_attestation.data.beacon_block_root
+    prev_attestation.unwrap().data.beacon_block_root
 };
-if beacon_header.parent_root != expected_parent {
+
+if beacon_header.parent_root != expected_parent_root {
     return Err(BeaconParentRootMismatch);
 }
 ```
-
-**Why?** Validates chain linkage. For slot 1, uses genesis root. For other slots, must match the previous attestation's beacon_block_root.
 
 ### Step 7: Beacon Header Timestamp
 
@@ -188,43 +216,59 @@ if beacon_header.timestamp != execution_payload.timestamp {
 }
 ```
 
-**Why?** Cross-validates that header and execution payload are consistent.
-
 ### Step 8: Find Current Attestation
 
 ```rust
 let current_attestation = beacon_block.body.attestations
-    .find(|att| att.data.slot == target_slot);
+    .iter()
+    .find(|att| att.data.slot == target_slot)
+    .ok_or(NoAttestationForSlot)?;
 ```
-
-**Why?** Need the current slot's attestation for signature verification.
 
 ### Step 9: Current Attestation Signature
 
+**This is the core security check.** Verify the current attestation was signed by the Linea sequencer:
+
 ```rust
-verify_attestation_signature(current_attestation, sequencer, Current)?;
+let signature = Signature::try_from(current_attestation.signature.as_ref())?;
+let recovered = signature.recover_address_from_prehash(
+    &current_attestation.data.beacon_block_root
+)?;
+
+if recovered != sequencer {
+    return Err(SignerMismatch);
+}
 ```
 
-**Why?** This is the core security check - proves the sequencer signed this beacon_block_root.
+**At this point**: We know the sequencer signed `current_attestation.data.beacon_block_root`.
 
 ### Step 10: Beacon Block Root Validation
 
+Compute the beacon block root from the header and verify it matches what the sequencer signed:
+
 ```rust
-let computed = compute_beacon_block_root(beacon_header);
-if computed != current_attestation.data.beacon_block_root {
+let computed_beacon_root = compute_beacon_block_root(beacon_header);
+
+if computed_beacon_root != current_attestation.data.beacon_block_root {
     return Err(BeaconBlockRootMismatch);
 }
 ```
 
-Beacon block root computation:
+Beacon block root formula:
 ```
-root = keccak256(rlp([slot, round, timestamp, [proposer],
-                       parent_root, state_root, body_root]))
+root = keccak256(rlp([
+    slot, round, timestamp, [proposer],
+    parent_root, state_root, body_root
+]))
 ```
 
-**Why?** Links the signed beacon_block_root to the beacon header (which contains body_root).
+**At this point**:
+- `BeaconHeader` is fully trusted (its hash was signed by sequencer)
+- `ExecutionPayload` is fully trusted (linked via `body_root`)
 
 ### Step 11: User Input Validation
+
+Validate the user's input against the trusted execution payload.
 
 ```rust
 if execution_payload.block_hash != user_block_hash {
@@ -232,7 +276,59 @@ if execution_payload.block_hash != user_block_hash {
 }
 ```
 
-**Why?** Final step - confirms the user's block hash matches the trusted execution payload.
+### Trust Flow Summary
+
+```
+Step 0-1:   Sanity checks, determine target slot
+Step 2-3:   Find and validate previous attestation (chain continuity)
+Step 4:     Link ExecutionPayload to BeaconHeader via body_root
+Step 5-7:   Validate BeaconHeader fields (slot, parent_root, timestamp)
+Step 8-9:   Find and validate current attestation (CORE SECURITY)
+Step 10:    Link BeaconHeader to signed beacon_block_root
+Step 11:    Validate user's block hash or header against trusted ExecutionPayload
+```
+
+---
+
+## Verification Modes
+
+### `verify_block_hash` (Minimal Mode)
+
+**Input**: Block hash + RPC responses
+**Output**: Success or error
+**Proves**: The block hash was committed to by the Linea sequencer
+
+Steps 0-10 validate the beacon chain data, then Step 11 confirms the block hash matches.
+
+### `verify_header` (Full Mode)
+
+**Input**: Complete header + RPC responses
+**Output**: Success or error
+**Proves**: All header fields match the execution payload
+
+In addition to all checks from minimal mode, this mode:
+
+1. Computes block hash from input header
+2. Verifies block hash matches execution payload
+3. Verifies all 13 individual fields match:
+
+| Execution Payload Field | Header Field |
+|------------------------|--------------|
+| `block_number` | `number` |
+| `parent_hash` | `parent_hash` |
+| `state_root` | `state_root` |
+| `receipts_root` | `receipts_root` |
+| `fee_recipient` | `beneficiary` |
+| `logs_bloom` | `logs_bloom` |
+| `timestamp` | `timestamp` |
+| `gas_limit` | `gas_limit` |
+| `gas_used` | `gas_used` |
+| `base_fee_per_gas` | `base_fee_per_gas` |
+| `extra_data` | `extra_data` |
+| `prev_randao` | `mix_hash` |
+| `transactions` → root | `transactions_root` |
+
+**Why full mode?** If the block hash matches but a field differs, it indicates a bug in Linea's implementation. This mode detects such bugs (`LineaBugDetected` error).
 
 ---
 
@@ -260,58 +356,3 @@ The RPC could include extra attestations beyond the two we need (current and pre
 ### What about the previous attestation's beacon_block_root?
 
 The previous attestation contains a `beacon_block_root` field that we use for `parent_root` validation. We verify the previous attestation signature (Step 3), so we know it was signed by the sequencer. This creates backward chain linkage.
-
----
-
-## Verification Modes
-
-### `verify_block_hash` (Minimal Mode)
-
-**Input**: Block hash + RPC responses
-**Output**: Success or error
-**Proves**: The block hash was committed to by the Linea sequencer
-
-Steps 0-10 validate the beacon chain data, then Step 11 confirms the block hash matches.
-
-### `verify_header` (Full Mode)
-
-**Input**: Complete header + RPC responses
-**Output**: Success or error
-**Proves**: All header fields match the execution payload
-
-In addition to all checks from minimal mode, this mode:
-
-1. Computes block hash from input header
-2. Verifies block hash matches execution payload
-3. Verifies all 13 individual fields match:
-
-| Field | Comparison |
-|-------|------------|
-| `block_number` | `execution_payload.block_number == header.number` |
-| `parent_hash` | `execution_payload.parent_hash == header.parent_hash` |
-| `state_root` | `execution_payload.state_root == header.state_root` |
-| `receipts_root` | `execution_payload.receipts_root == header.receipts_root` |
-| `fee_recipient` | `execution_payload.fee_recipient == header.beneficiary` |
-| `logs_bloom` | `execution_payload.logs_bloom == header.logs_bloom` |
-| `timestamp` | `execution_payload.timestamp == header.timestamp` |
-| `gas_limit` | `execution_payload.gas_limit == header.gas_limit` |
-| `gas_used` | `execution_payload.gas_used == header.gas_used` |
-| `base_fee_per_gas` | `execution_payload.base_fee_per_gas == header.base_fee_per_gas` |
-| `extra_data` | `execution_payload.extra_data == header.extra_data` |
-| `prev_randao` | `execution_payload.prev_randao == header.mix_hash` |
-| `transactions_root` | computed from `execution_payload.transactions` |
-
-**Why full mode?** If the block hash matches but a field differs, it indicates a bug in Linea's implementation. This mode detects such bugs (`LineaBugDetected` error).
-
----
-
-## Summary
-
-The verifier provides cryptographic proof that a block hash or header was committed to by the Linea sequencer through:
-
-1. **ECDSA signature verification** on attestations
-2. **Hash chain validation** from signature → beacon root → body hash → block hash
-3. **Chain continuity** via previous attestation validation
-4. **Slot linkage** via parent_root validation
-
-The only trust assumptions are the three hardcoded constants (sequencer addresses, activation blocks, genesis beacon roots). Everything else is validated cryptographically.

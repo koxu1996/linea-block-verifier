@@ -6,6 +6,8 @@ Cryptographically verify Linea blocks using beacon chain attestations and sequen
 
 This project provides tools to prove that a Linea block hash or header is authentic by verifying the sequencer's ECDSA signature. It's designed for use in zkVM environments where trustless verification is required.
 
+For detailed security model and verification logic, see [SECURITY.md](SECURITY.md).
+
 ## Crates
 
 | Crate | Description |
@@ -23,91 +25,10 @@ This project provides tools to prove that a Linea block hash or header is authen
 
 ## Verification Modes
 
-Two verification modes are available:
-
 | Mode | Description | Use Case |
 |------|-------------|----------|
 | `verify_block_hash` | Verifies only the block hash | Faster, minimal proof that block hash is authentic |
 | `verify_header` | Verifies full header + Linea bug detection | Complete validation with field-by-field checks |
-
-## What This Proves
-
-Given a block hash or header, verification proves:
-
-1. **The Linea sequencer signed a commitment** to that exact block (ECDSA signature)
-2. **Current slot attestation** was signed by the sequencer
-3. **Previous slot attestation** was signed by the sequencer (chain continuity)
-4. **Beacon header is correctly linked** to parent block via parent_root
-5. **Body hash commits to execution payload** containing the block hash
-6. **No data can be forged** - cryptographic proof chain from block hash → execution payload → body hash → beacon root → attestation signature
-
-## Security Model
-
-### Trust Assumptions
-
-Only three hardcoded constants:
-- **Sequencer addresses**: Mainnet and Sepolia sequencer public keys
-- **Activation blocks**: Network-specific V4 activation block numbers
-- **Genesis beacon roots**: Slot 0 beacon block roots for parent_root validation of slot 1
-
-### Everything Else is Untrusted
-- Input block hash/header - what we're verifying
-- Beacon RPC responses - validated cryptographically, can only affect availability
-
-### Cryptographic Chain of Trust
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CURRENT ATTESTATION                          │
-│  signature ─────────► recover_address ═══► must equal sequencer │
-│  data.beacon_block_root ◄───────────────────────────────────────│
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ must equal
-┌─────────────────────────────────────────────────────────────────┐
-│                    BEACON HEADER                                │
-│  computed: keccak256(rlp([slot, round, timestamp, [proposer],   │
-│            parent_root, state_root, body_root]))                │
-│                              │                                   │
-│  body_root ◄─────────────────│                                   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ must equal
-┌─────────────────────────────────────────────────────────────────┐
-│                    BODY HASH                                    │
-│  computed: keccak256(rlp([[prev_attestation_sig],               │
-│                            execution_payload]))                 │
-│                              │                                   │
-│  execution_payload.block_hash ◄──────────────────────────────────│
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ must equal
-┌─────────────────────────────────────────────────────────────────┐
-│                    USER INPUT                                   │
-│  block_hash (or computed from header)                           │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Verified Fields (Full Header Mode)
-
-All 12 execution header fields are verified against the beacon execution payload:
-
-| Field | Description |
-|-------|-------------|
-| `block_number` | Block height |
-| `block_hash` | Block identifier |
-| `parent_hash` | Link to previous block |
-| `state_root` | World state commitment |
-| `receipts_root` | Transaction receipts commitment |
-| `transactions_root` | Transactions trie root |
-| `fee_recipient` | Block proposer/coinbase |
-| `logs_bloom` | Event logs bloom filter |
-| `timestamp` | Block timestamp |
-| `gas_limit` | Maximum gas allowed |
-| `gas_used` | Actual gas consumed |
-| `base_fee_per_gas` | EIP-1559 base fee |
-| `extra_data` | Additional block data |
-| `prev_randao` | Previous RANDAO value (mix_hash) |
 
 ## Usage
 
@@ -181,23 +102,6 @@ Block hash: 0x8616e9df03beebc32579b6a622ace9b9c103906deeace76567edf2458d97070b
 
 Both verification modes passed successfully!
 ```
-
-## Verification Steps
-
-The verification performs these steps:
-
-0. **RPC Sanity Checks**: Version is "maru", block signature is empty, proposer matches sequencer
-1. **Slot Validation**: Reject slot 0 (activation block)
-2. **Previous Attestation**: Find attestation for slot-1 (required for slots > 1)
-3. **Previous Attestation Signature**: Verify signed by sequencer
-4. **Body Hash**: Compute and verify against beacon header body_root
-5. **Beacon Header Slot**: Verify matches block response slot
-6. **Beacon Header Parent Root**: Verify matches previous attestation (or genesis root for slot 1)
-7. **Beacon Header Timestamp**: Verify matches execution payload timestamp
-8. **Current Attestation**: Find attestation for current slot
-9. **Current Attestation Signature**: Verify signed by sequencer
-10. **Beacon Block Root**: Compute from header and verify matches attestation
-11. **User Input**: Verify block hash (both modes) + field comparison (full header mode)
 
 ## Building
 
