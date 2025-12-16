@@ -10,7 +10,7 @@ edition = "2024"
 # Asynchronous runtime.
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
-# Eror handling.
+# Error handling.
 anyhow = "1.0"
 
 # Linea block verification.
