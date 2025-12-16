@@ -1,3 +1,4 @@
+use alloy_primitives::B256;
 use clap::{Parser, Subcommand, ValueEnum};
 use linea_block_verifier::core::constants::LineaNetwork;
 use std::path::PathBuf;
@@ -31,6 +32,12 @@ pub enum Command {
     /// Path to block header JSON file
     #[arg(long)]
     file_path: PathBuf,
+  },
+  /// Verify a block hash (without full header verification)
+  Hash {
+    /// The block hash to verify (0x-prefixed hex string)
+    #[arg(long)]
+    block_hash: B256,
   },
 }
 

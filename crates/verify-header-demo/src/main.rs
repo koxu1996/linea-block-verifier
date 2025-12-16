@@ -3,8 +3,7 @@ use clap::Parser;
 use color_eyre::eyre;
 
 use linea_block_verifier::core::constants::{LineaNetwork, get_chain_id};
-use linea_block_verifier::core::verify_header;
-use linea_block_verifier::core::zkvm::UserInput;
+use linea_block_verifier::core::{verify_block_hash, verify_header};
 use linea_block_verifier::host::BeaconClient;
 use linea_block_verifier::host::rpc::{get_linea_cl_http_rpc, get_linea_el_http_rpc};
 
@@ -31,34 +30,45 @@ async fn main() -> eyre::Result<()> {
   // Create beacon client
   let beacon_client = BeaconClient::new(linea_cl_rpc, linea_network);
 
-  let input_header_rpc = match &args.command {
-    Command::Recent => commands::recent(&provider).await?,
-    Command::Local { file_path } => commands::local(file_path)?,
-  };
-  let input_header = input_header_rpc.into_consensus();
+  match &args.command {
+    Command::Recent => {
+      let input_header_rpc = commands::recent(&provider).await?;
+      verify_header_command(&beacon_client, input_header_rpc.into_consensus()).await?;
+    }
+    Command::Local { file_path } => {
+      let input_header_rpc = commands::local(file_path)?;
+      verify_header_command(&beacon_client, input_header_rpc.into_consensus()).await?;
+    }
+    Command::Hash { block_hash } => {
+      verify_hash_command(&provider, &beacon_client, *block_hash).await?;
+    }
+  }
 
+  Ok(())
+}
+
+async fn verify_header_command(
+  beacon_client: &BeaconClient,
+  input_header: alloy_consensus::Header,
+) -> eyre::Result<()> {
   println!("Block number: {}", input_header.number);
   println!("Block hash: {}", input_header.hash_slow());
   println!();
 
-  // Create verify input (fetches beacon block and header)
+  // Fetch beacon data
   println!("Fetching beacon data...");
-  let verify_input = beacon_client.create_verify_input(input_header).await?;
+  let beacon_data = beacon_client.fetch_beacon_data(input_header.number).await?;
   println!(
     "Beacon block slot: {}",
-    verify_input.beacon_data.block_response.data.message.slot
+    beacon_data.block_response.data.message.slot
   );
 
   // Verify the header against beacon chain data
-  let header = match &verify_input.user_input {
-    UserInput::Header(h) => h,
-    UserInput::BlockHash(_) => unreachable!("created with header"),
-  };
   verify_header(
-    header,
-    &verify_input.beacon_data.block_response,
-    &verify_input.beacon_data.header_response,
-    verify_input.network,
+    &input_header,
+    &beacon_data.block_response,
+    &beacon_data.header_response,
+    beacon_client.network(),
   )?;
 
   println!("\n=== All verifications passed! ===");
@@ -71,6 +81,52 @@ async fn main() -> eyre::Result<()> {
   println!("\n==> PROVEN: The input header is AUTHENTIC");
   println!("    The Linea sequencer cryptographically signed this exact block header.");
   println!("    All fields (state_root, receipts_root, etc.) can now be trusted.");
+
+  Ok(())
+}
+
+async fn verify_hash_command(
+  provider: &alloy_provider::RootProvider<alloy_provider::network::Ethereum>,
+  beacon_client: &BeaconClient,
+  block_hash: alloy_primitives::B256,
+) -> eyre::Result<()> {
+  // Look up block number from hash
+  println!("Looking up block number for hash {}...", block_hash);
+  let block = provider
+    .get_block_by_hash(block_hash)
+    .await?
+    .ok_or_else(|| eyre::eyre!("Block not found for hash {}", block_hash))?;
+  let block_number = block.header.number;
+
+  println!("Block number: {}", block_number);
+  println!("Block hash: {}", block_hash);
+  println!();
+
+  // Fetch beacon data
+  println!("Fetching beacon data...");
+  let beacon_data = beacon_client.fetch_beacon_data(block_number).await?;
+  println!(
+    "Beacon block slot: {}",
+    beacon_data.block_response.data.message.slot
+  );
+
+  // Verify only the block hash against beacon chain data
+  verify_block_hash(
+    block_hash,
+    &beacon_data.block_response,
+    &beacon_data.header_response,
+    beacon_client.network(),
+  )?;
+
+  println!("\n=== Block hash verification passed! ===");
+  println!("1. Block hash verified against beacon chain execution_payload");
+  println!("2. Beacon block signature is empty (Linea-specific)");
+  println!("3. Proposer address matches expected sequencer");
+  println!("4. Beacon block root correctly computed and matches attestation");
+  println!("5. Body hash verified: execution_payload cryptographically committed");
+  println!("6. Attestation ECDSA signature verified by sequencer");
+  println!("\n==> PROVEN: The block hash {} is AUTHENTIC", block_hash);
+  println!("    The Linea sequencer cryptographically signed a block with this hash.");
 
   Ok(())
 }
