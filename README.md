@@ -12,7 +12,8 @@ For detailed security model and verification logic, see [SECURITY.md](SECURITY.m
 
 | Crate | Description |
 |-------|-------------|
-| `linea-proof-core` | Core verification logic (no-std compatible for zkVM) |
+| `linea-block-verifier` | Umbrella crate re-exporting core and host |
+| `linea-proof-core` | Core verification logic (for zkVM) and basic types |
 | `linea-proof-host` | Host utilities: beacon client, RPC helpers |
 | `verify-header-demo` | CLI demo for header verification |
 
@@ -41,15 +42,29 @@ cargo run -p verify-header-demo -- --network sepolia recent
 # Verify a recent block on Mainnet
 cargo run -p verify-header-demo -- --network mainnet recent
 
+# Verify a block hash only (without full header)
+cargo run -p verify-header-demo -- --network mainnet hash \
+  --block-hash 0x6d93533ba354440c035355657195dd7832df0ac3d232904d08e67296fd5ce75c
+
 # Verify from local JSON file
 cargo run -p verify-header-demo -- --network mainnet local --file-path header.json
 ```
 
 ### Library Usage
 
+Use the umbrella crate for convenience:
+
+```toml
+# For host applications (includes BeaconClient)
+linea-block-verifier = { version = "0.1", features = ["host"] }
+
+# For zkVM guests (no_std compatible)
+linea-block-verifier = { version = "0.1", features = ["std"] }
+```
+
 ```rust
-use linea_proof_core::{verify_header, verify_block_hash, LineaNetwork};
-use linea_proof_host::BeaconClient;
+use linea_block_verifier::core::{verify_header, verify_block_hash, LineaNetwork};
+use linea_block_verifier::host::BeaconClient;
 
 // Fetch beacon data
 let client = BeaconClient::new("http://beacon-rpc:10080", LineaNetwork::Mainnet);
@@ -76,32 +91,6 @@ The host will:
 1. Fetch a recent Linea block and beacon data (or load from `verify_input.bin` if cached)
 2. Execute **both** verification modes in the zkVM
 3. Report cycle counts and timing comparison
-
-Example output:
-```
-Validating Linea block number: 22098808
-Block hash: 0x8616e9df03beebc32579b6a622ace9b9c103906deeace76567edf2458d97070b
-
-=== Mode 1: Block Hash Verification ===
-BlockHash input: 2465 bytes
-Executing...
-BlockHash verification: 0.15s, 1355408 cycles, 1 segments
-
-=== Mode 2: Full Header Verification ===
-FullHeader input: 3291 bytes
-Executing...
-FullHeader verification: 0.15s, 1398539 cycles, 1 segments
-
-=== Summary for block 22098808 ===
-Block hash: 0x8616e9df03beebc32579b6a622ace9b9c103906deeace76567edf2458d97070b
-
-  BlockHash mode:        1355408 cycles  (0.15s)
-  FullHeader mode:       1398539 cycles  (0.15s)
-
-  Difference:             +43131 cycles  (+3.2%)
-
-Both verification modes passed successfully!
-```
 
 ## Building
 
@@ -141,7 +130,3 @@ cargo test
 - [Linea V4 Beta Migration Guide](https://docs.linea.build/get-started/how-to/run-a-node/beta-v4-migration)
 - [Maru Consensus](https://github.com/Consensys/maru/)
 - [Linea Documentation](https://docs.linea.build/)
-
-## License
-
-MIT OR Apache-2.0
