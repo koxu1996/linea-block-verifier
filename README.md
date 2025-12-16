@@ -158,26 +158,26 @@ The host will:
 
 Example output:
 ```
-Validating Linea block number: 21991036
-Block hash: 0xac172f999c27c121f94685db33c96649b16d75af97540ac840862dea06584f6d
+Validating Linea block number: 22098808
+Block hash: 0x8616e9df03beebc32579b6a622ace9b9c103906deeace76567edf2458d97070b
 
 === Mode 1: Block Hash Verification ===
-BlockHash input: 2461 bytes
+BlockHash input: 2465 bytes
 Executing...
-BlockHash verification: 0.15s, 1345751 cycles, 1 segments
+BlockHash verification: 0.15s, 1355408 cycles, 1 segments
 
 === Mode 2: Full Header Verification ===
-FullHeader input: 3287 bytes
+FullHeader input: 3291 bytes
 Executing...
-FullHeader verification: 0.19s, 1391661 cycles, 1 segments
+FullHeader verification: 0.15s, 1398539 cycles, 1 segments
 
-=== Summary for block 21991036 ===
-Block hash: 0xac172f999c27c121f94685db33c96649b16d75af97540ac840862dea06584f6d
+=== Summary for block 22098808 ===
+Block hash: 0x8616e9df03beebc32579b6a622ace9b9c103906deeace76567edf2458d97070b
 
-  BlockHash mode:        1345751 cycles  (0.15s)
-  FullHeader mode:       1391661 cycles  (0.19s)
+  BlockHash mode:        1355408 cycles  (0.15s)
+  FullHeader mode:       1398539 cycles  (0.15s)
 
-  Difference:             +45910 cycles  (+3.4%)
+  Difference:             +43131 cycles  (+3.2%)
 
 Both verification modes passed successfully!
 ```
