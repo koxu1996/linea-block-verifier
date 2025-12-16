@@ -44,12 +44,14 @@ pub fn verify_block_hash(
 ///
 /// This entry point validates a complete header and performs additional consistency checks.
 /// If the block hash matches but fields differ, it indicates a bug in Linea (LineaBugDetected).
+///
+/// Returns the trusted block hash on success.
 pub fn verify_header(
   input_header: &Header,
   block_response: &BeaconBlockResponse,
   header_response: &BeaconHeaderResponse,
   network: LineaNetwork,
-) -> Result<(), VerifyError> {
+) -> Result<B256, VerifyError> {
   // Validate beacon data and get trusted execution payload
   let execution_payload = verify_beacon_data(block_response, header_response, network)?;
 
@@ -67,7 +69,7 @@ pub fn verify_header(
   // Block hash matches - now verify all fields for Linea bug detection
   verify_execution_payload_fields(execution_payload, input_header)?;
 
-  Ok(())
+  Ok(execution_payload.block_hash)
 }
 
 /// Core beacon data validation.

@@ -139,7 +139,9 @@ impl VerifyInput {
 ///
 /// This is the main entry point for zkVM verification. It deserializes
 /// the input and performs all verification checks including Linea bug detection.
-pub fn verify_from_bytes(bytes: &[u8]) -> Result<(), VerifyError> {
+///
+/// Returns the trusted block hash on success.
+pub fn verify_from_bytes(bytes: &[u8]) -> Result<B256, VerifyError> {
   let input = VerifyInput::from_bytes(bytes).map_err(|_| VerifyError::DeserializationError)?;
 
   verify_header(
