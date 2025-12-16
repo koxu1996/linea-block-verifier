@@ -135,20 +135,10 @@ let client = BeaconClient::new("http://beacon-rpc:10080", LineaNetwork::Mainnet)
 let verify_input = client.create_verify_input(header).await?;
 
 // Option 1: Verify block hash only (faster)
-verify_block_hash(
-    block_hash,
-    &verify_input.block_response,
-    &verify_input.header_response,
-    LineaNetwork::Mainnet,
-)?;
+verify_block_hash(block_hash, &beacon_data, LineaNetwork::Mainnet)?;
 
 // Option 2: Verify full header with Linea bug detection
-verify_header(
-    &input_header,
-    &verify_input.block_response,
-    &verify_input.header_response,
-    LineaNetwork::Mainnet,
-)?;
+verify_header(&input_header, &beacon_data, LineaNetwork::Mainnet)?;
 ```
 
 ### RISC Zero zkVM

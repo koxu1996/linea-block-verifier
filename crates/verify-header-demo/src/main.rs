@@ -64,12 +64,7 @@ async fn verify_header_command(
   );
 
   // Verify the header against beacon chain data
-  verify_header(
-    &input_header,
-    &beacon_data.block_response,
-    &beacon_data.header_response,
-    beacon_client.network(),
-  )?;
+  verify_header(&input_header, &beacon_data, beacon_client.network())?;
 
   println!("\n=== All verifications passed! ===");
   println!("1. All 12 execution header fields verified against beacon chain");
@@ -111,12 +106,7 @@ async fn verify_hash_command(
   );
 
   // Verify only the block hash against beacon chain data
-  verify_block_hash(
-    block_hash,
-    &beacon_data.block_response,
-    &beacon_data.header_response,
-    beacon_client.network(),
-  )?;
+  verify_block_hash(block_hash, &beacon_data, beacon_client.network())?;
 
   println!("\n=== Block hash verification passed! ===");
   println!("1. Block hash verified against beacon chain execution_payload");

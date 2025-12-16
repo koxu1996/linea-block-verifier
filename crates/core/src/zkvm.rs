@@ -84,19 +84,9 @@ pub fn verify_from_bytes(bytes: &[u8]) -> Result<B256, VerifyError> {
 
   match &input.user_input {
     UserInput::BlockHash(block_hash) => {
-      verify_block_hash(
-        *block_hash,
-        &input.beacon_data.block_response,
-        &input.beacon_data.header_response,
-        input.network,
-      )?;
+      verify_block_hash(*block_hash, &input.beacon_data, input.network)?;
       Ok(*block_hash)
     }
-    UserInput::Header(header) => verify_header(
-      header,
-      &input.beacon_data.block_response,
-      &input.beacon_data.header_response,
-      input.network,
-    ),
+    UserInput::Header(header) => verify_header(header, &input.beacon_data, input.network),
   }
 }
