@@ -18,6 +18,9 @@ jobs:
           uname -a
           nix --version
 
+      - name: license-check
+        run: nix build -L --no-link --show-trace .#checks.x86_64-linux.licenseCheck
+
       - name: formatting
         run: nix build -L --no-link --show-trace .#checks.x86_64-linux.formatting
 
