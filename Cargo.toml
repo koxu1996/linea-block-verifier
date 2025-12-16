@@ -2,6 +2,7 @@
 members = [
   "crates/core",
   "crates/host",
+  "crates/linea-block-verifier",
   "crates/verify-header-demo",
 ]
 resolver = "3"
@@ -39,5 +40,6 @@ url = "2.5.7"
 hex-literal = "0.4"
 
 # Workspace crates.
+linea-block-verifier = { path = "crates/linea-block-verifier" }
 linea-proof-core = { path = "crates/core" }
 linea-proof-host = { path = "crates/host" }

@@ -1,0 +1,15 @@
+[package]
+name = "linea-block-verifier"
+version = { workspace = true }
+edition = { workspace = true }
+description = "Unified API for Linea block verification"
+
+[features]
+default = []
+std = ["linea-proof-core/std"]
+host = ["std", "dep:linea-proof-host"]
+full = ["host"]
+
+[dependencies]
+linea-proof-core = { workspace = true }
+linea-proof-host = { workspace = true, optional = true }
