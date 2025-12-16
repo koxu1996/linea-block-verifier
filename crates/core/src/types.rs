@@ -82,7 +82,7 @@ pub struct BeaconHeader {
 impl Encodable for BeaconHeader {
   fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
     // Encode as: [slot, round, timestamp, [proposer], parent_root, state_root, body_root]
-    // Note: Besu encodes slot/round/timestamp as fixed-size big-endian bytes, not RLP scalars
+    // Note: Maru encodes slot/round/timestamp as fixed-size big-endian bytes, not RLP scalars
     alloy_rlp::Header {
       list: true,
       payload_length: self.payload_length(),

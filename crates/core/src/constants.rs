@@ -25,6 +25,7 @@ impl TryFrom<u64> for LineaNetwork {
 pub const LINEA_MAINNET_CHAIN_ID: u64 = 59144;
 pub const LINEA_SEPOLIA_CHAIN_ID: u64 = 59141;
 
+/// Block where consensus was enabled in Linea.
 pub const LINEA_MAINNET_ACTIVATION_BLOCK: u64 = 24_787_631;
 pub const LINEA_SEPOLIA_ACTIVATION_BLOCK: u64 = 18_665_903;
 

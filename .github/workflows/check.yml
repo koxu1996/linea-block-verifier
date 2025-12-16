@@ -29,4 +29,3 @@ jobs:
 
       - name: verify-header-demo
         run: nix build -L --no-link --show-trace .#packages.x86_64-linux.verify-header-demo
-
