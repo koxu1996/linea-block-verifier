@@ -2,7 +2,9 @@
 
 extern crate alloc;
 
-use linea_proof_core::VerifyMode;
+use linea_block_verifier::core::{
+  VerifyMode, verify_block_hash_from_bytes, verify_from_bytes,
+};
 use risc0_zkvm::guest::env;
 
 risc0_zkvm::guest::entry!(main);
@@ -23,12 +25,11 @@ fn main() {
   // Deserialize and verify based on mode.
   match mode {
     VerifyMode::BlockHash => {
-      linea_proof_core::verify_block_hash_from_bytes(&input_bytes)
-        .expect("block hash verification failed");
+      verify_block_hash_from_bytes(&input_bytes).expect("block hash verification failed");
       println!("Block hash verification passed!");
     }
     VerifyMode::FullHeader => {
-      linea_proof_core::verify_from_bytes(&input_bytes).expect("header verification failed");
+      verify_from_bytes(&input_bytes).expect("header verification failed");
       println!("Full header verification passed!");
     }
   }

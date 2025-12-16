@@ -1,6 +1,9 @@
 pub const RISC0_GUEST_ELF: &[u8] = include_bytes!(env!(concat!("R0_ELF_", "risc0-guest")));
 
-use linea_proof_host::VerifyMode;
+use linea_block_verifier::core::VerifyMode;
+use linea_block_verifier::host::{
+  create_verify_input, load_verify_input_from_file, save_verify_input_to_file,
+};
 use risc0_zkvm::{ExecutorEnv, default_executor};
 use std::path::Path;
 
@@ -24,13 +27,13 @@ async fn main() -> anyhow::Result<()> {
       "WARNING: Using cached input. Remove {} to fetch new data for recent blocks.",
       INPUT_FILE
     );
-    linea_proof_host::load_verify_input_from_file(input_path).map_err(|e| anyhow::anyhow!("{e}"))?
+    load_verify_input_from_file(input_path).map_err(|e| anyhow::anyhow!("{e}"))?
   } else {
     println!("Fetching input from network...");
-    let input = linea_proof_host::create_verify_input()
+    let input = create_verify_input()
       .await
       .map_err(|e| anyhow::anyhow!("{e}"))?;
-    linea_proof_host::save_verify_input_to_file(&input, input_path)
+    save_verify_input_to_file(&input, input_path)
       .map_err(|e| anyhow::anyhow!("{e}"))?;
     println!("Saved input to {}", INPUT_FILE);
     input

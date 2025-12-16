@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use linea_proof_core::LineaNetwork;
+use linea_block_verifier::core::LineaNetwork;
 use std::path::PathBuf;
 
 pub mod commands;

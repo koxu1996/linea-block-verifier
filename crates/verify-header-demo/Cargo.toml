@@ -5,8 +5,7 @@ edition = { workspace = true }
 
 [dependencies]
 # Workspace crates.
-linea-proof-core = { workspace = true }
-linea-proof-host = { workspace = true }
+linea-block-verifier = { workspace = true, features = ["host"] }
 
 # Asynchronous runtime.
 tokio = { workspace = true }

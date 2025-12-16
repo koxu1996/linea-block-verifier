@@ -4001,8 +4001,7 @@ dependencies = [
  "alloy-rpc-types",
  "clap",
  "color-eyre",
- "linea-proof-core",
- "linea-proof-host",
+ "linea-block-verifier",
  "serde_json",
  "tokio",
 ]

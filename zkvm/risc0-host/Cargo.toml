@@ -6,7 +6,7 @@ edition = "2024"
 [workspace]
 
 [dependencies]
-linea-proof-host = { path = "../../crates/host" }
+linea-block-verifier = { path = "../../crates/linea-block-verifier", features = ["host"] }
 risc0-zkvm = "3.0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 anyhow = "1.0"
