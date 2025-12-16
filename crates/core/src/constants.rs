@@ -10,6 +10,18 @@ pub enum LineaNetwork {
   Sepolia,
 }
 
+impl TryFrom<u64> for LineaNetwork {
+  type Error = &'static str;
+
+  fn try_from(chain_id: u64) -> Result<Self, Self::Error> {
+    match chain_id {
+      LINEA_MAINNET_CHAIN_ID => Ok(LineaNetwork::Mainnet),
+      LINEA_SEPOLIA_CHAIN_ID => Ok(LineaNetwork::Sepolia),
+      _ => Err("unknown Linea network"),
+    }
+  }
+}
+
 pub const LINEA_MAINNET_CHAIN_ID: u64 = 59144;
 pub const LINEA_SEPOLIA_CHAIN_ID: u64 = 59141;
 
