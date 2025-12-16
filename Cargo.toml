@@ -11,6 +11,9 @@ resolver = "3"
 version = "0.1.0"
 edition = "2024"
 
+[workspace.metadata.crane]
+name = "linea-block-verifier"
+
 [workspace.dependencies]
 
 # Asynchronous runtime.
