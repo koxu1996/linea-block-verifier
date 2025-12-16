@@ -2643,6 +2643,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "linea-block-verifier"
+version = "0.1.0"
+dependencies = [
+ "linea-proof-core",
+ "linea-proof-host",
+]
+
+[[package]]
 name = "linea-proof-core"
 version = "0.1.0"
 dependencies = [
@@ -3793,7 +3801,7 @@ name = "risc0-host"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "linea-proof-host",
+ "linea-block-verifier",
  "risc0-build 3.0.3",
  "risc0-zkvm",
  "tokio",

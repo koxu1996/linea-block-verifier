@@ -354,3 +354,16 @@ pub struct BeaconBlockData {
   )]
   pub signature: Bytes,
 }
+
+/// Auxiliary beacon chain data needed for verification.
+///
+/// This data is fetched by the host from the beacon chain API
+/// and is required to verify user-provided inputs.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct BeaconData {
+  /// The beacon block response containing execution payload and attestations.
+  pub block_response: BeaconBlockResponse,
+  /// The beacon header response containing the signed header.
+  pub header_response: BeaconHeaderResponse,
+}

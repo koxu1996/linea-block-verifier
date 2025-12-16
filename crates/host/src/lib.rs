@@ -58,6 +58,7 @@ pub fn save_verify_input_to_file(input: &VerifyInput, path: &std::path::Path) ->
 #[cfg(test)]
 mod tests {
   use super::*;
+  use linea_proof_core::zkvm::UserInput;
 
   #[::tokio::test]
   async fn test_verify_input_roundtrip() {
@@ -71,11 +72,15 @@ mod tests {
     let restored = VerifyInput::from_bytes(&bytes).expect("should deserialize");
 
     // Verify fields match.
-    assert_eq!(input.input_header.number, restored.input_header.number);
+    let (input_number, restored_number) = match (&input.user_input, &restored.user_input) {
+      (UserInput::Header(h1), UserInput::Header(h2)) => (h1.number, h2.number),
+      _ => panic!("expected Header variant"),
+    };
+    assert_eq!(input_number, restored_number);
     assert_eq!(input.network, restored.network);
     assert_eq!(
-      input.block_response.data.message.slot,
-      restored.block_response.data.message.slot
+      input.beacon_data.block_response.data.message.slot,
+      restored.beacon_data.block_response.data.message.slot
     );
   }
 

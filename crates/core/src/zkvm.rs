@@ -11,105 +11,51 @@ use serde::{Deserialize, Serialize};
 
 use crate::constants::LineaNetwork;
 use crate::error::VerifyError;
-use crate::types::{BeaconBlockResponse, BeaconHeaderResponse};
+use crate::types::BeaconData;
 use crate::verify::{verify_block_hash, verify_header};
 
-/// Verification mode for zkVM.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum VerifyMode {
-  /// Verify only the block hash (faster, smaller input).
-  BlockHash,
-  /// Verify the full header with Linea bug detection.
-  FullHeader,
-}
-
-/// Input for zkVM block hash verification.
+/// User-provided input for verification.
 ///
-/// This is the minimal input for verifying a block hash.
-/// Use this when you only need to prove a block hash is authentic.
+/// This represents what the user wants to verify - either a block hash
+/// or a full header.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VerifyBlockHashInput {
-  /// The block hash to verify.
-  pub block_hash: B256,
-  /// The beacon block response.
-  pub block_response: BeaconBlockResponse,
-  /// The beacon header response.
-  pub header_response: BeaconHeaderResponse,
-  /// The network.
-  pub network: LineaNetwork,
+pub enum UserInput {
+  /// Verify only the block hash (faster, smaller input).
+  BlockHash(B256),
+  /// Verify the full header with Linea bug detection.
+  Header(Header),
 }
 
-impl VerifyBlockHashInput {
-  /// Create a new block hash verification input.
-  pub fn new(
-    block_hash: B256,
-    block_response: BeaconBlockResponse,
-    header_response: BeaconHeaderResponse,
-    network: LineaNetwork,
-  ) -> Self {
-    Self {
-      block_hash,
-      block_response,
-      header_response,
-      network,
-    }
-  }
-
-  /// Serialize this input to bytes for passing into zkVM.
-  pub fn to_bytes(&self) -> Result<Vec<u8>, VerifyError> {
-    bincode::serialize(self).map_err(|_| VerifyError::SerializationError)
-  }
-
-  /// Deserialize input from bytes inside zkVM.
-  pub fn from_bytes(bytes: &[u8]) -> Result<Self, bincode::Error> {
-    bincode::deserialize(bytes)
-  }
-}
-
-/// Verify a block hash from serialized bytes.
+/// Complete zkVM verification input.
 ///
-/// This verifies only the block hash against the beacon chain data.
-pub fn verify_block_hash_from_bytes(bytes: &[u8]) -> Result<(), VerifyError> {
-  let input =
-    VerifyBlockHashInput::from_bytes(bytes).map_err(|_| VerifyError::DeserializationError)?;
-
-  verify_block_hash(
-    input.block_hash,
-    &input.block_response,
-    &input.header_response,
-    input.network,
-  )
-}
-
-/// Input for zkVM header verification.
-///
-/// This struct contains all the data needed to verify a Linea block header
-/// inside a zkVM. It can be serialized to bytes for passing into the zkVM
-/// and deserialized inside for verification.
+/// This struct contains all the data needed to verify a Linea block
+/// inside a zkVM. It separates user-provided input from auxiliary
+/// beacon chain data fetched by the host.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VerifyInput {
-  /// The execution layer header.
-  pub input_header: Header,
-  /// The beacon block response.
-  pub block_response: BeaconBlockResponse,
-  /// The beacon header response.
-  pub header_response: BeaconHeaderResponse,
+  /// User-provided input (block hash or full header).
+  pub user_input: UserInput,
+  /// Auxiliary beacon chain data fetched by the host.
+  pub beacon_data: BeaconData,
   /// The network.
   pub network: LineaNetwork,
 }
 
 impl VerifyInput {
-  /// Create a new verification input from the component parts.
-  pub fn new(
-    input_header: Header,
-    block_response: BeaconBlockResponse,
-    header_response: BeaconHeaderResponse,
-    network: LineaNetwork,
-  ) -> Self {
+  /// Create a new verification input for a block hash.
+  pub fn new_block_hash(block_hash: B256, beacon_data: BeaconData, network: LineaNetwork) -> Self {
     Self {
-      input_header,
-      block_response,
-      header_response,
+      user_input: UserInput::BlockHash(block_hash),
+      beacon_data,
+      network,
+    }
+  }
+
+  /// Create a new verification input for a full header.
+  pub fn new_header(header: Header, beacon_data: BeaconData, network: LineaNetwork) -> Self {
+    Self {
+      user_input: UserInput::Header(header),
+      beacon_data,
       network,
     }
   }
@@ -123,31 +69,34 @@ impl VerifyInput {
   pub fn from_bytes(bytes: &[u8]) -> Result<Self, bincode::Error> {
     bincode::deserialize(bytes)
   }
-
-  /// Convert to a block hash input (for hash-only verification).
-  pub fn to_block_hash_input(&self) -> VerifyBlockHashInput {
-    VerifyBlockHashInput {
-      block_hash: self.input_header.hash_slow(),
-      block_response: self.block_response.clone(),
-      header_response: self.header_response.clone(),
-      network: self.network,
-    }
-  }
 }
 
-/// Verify a header from serialized bytes.
+/// Verify input from serialized bytes.
 ///
 /// This is the main entry point for zkVM verification. It deserializes
-/// the input and performs all verification checks including Linea bug detection.
+/// the input and performs verification based on the input type:
+/// - `UserInput::BlockHash`: Verifies only the block hash
+/// - `UserInput::Header`: Verifies the full header with Linea bug detection
 ///
 /// Returns the trusted block hash on success.
 pub fn verify_from_bytes(bytes: &[u8]) -> Result<B256, VerifyError> {
   let input = VerifyInput::from_bytes(bytes).map_err(|_| VerifyError::DeserializationError)?;
 
-  verify_header(
-    &input.input_header,
-    &input.block_response,
-    &input.header_response,
-    input.network,
-  )
+  match &input.user_input {
+    UserInput::BlockHash(block_hash) => {
+      verify_block_hash(
+        *block_hash,
+        &input.beacon_data.block_response,
+        &input.beacon_data.header_response,
+        input.network,
+      )?;
+      Ok(*block_hash)
+    }
+    UserInput::Header(header) => verify_header(
+      header,
+      &input.beacon_data.block_response,
+      &input.beacon_data.header_response,
+      input.network,
+    ),
+  }
 }

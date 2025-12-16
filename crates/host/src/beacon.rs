@@ -1,10 +1,11 @@
 //! Beacon chain API client.
 
 use alloy_consensus::Header;
+use alloy_primitives::B256;
 use color_eyre::eyre::{self, bail};
 use linea_proof_core::beacon_slot_from_block_number;
 use linea_proof_core::constants::{LineaNetwork, get_chain_id};
-use linea_proof_core::types::{BeaconBlockResponse, BeaconHeaderResponse};
+use linea_proof_core::types::{BeaconBlockResponse, BeaconData, BeaconHeaderResponse};
 use linea_proof_core::zkvm::VerifyInput;
 use serde::Deserialize;
 
@@ -29,6 +30,11 @@ impl Client {
       http: reqwest::Client::new(),
       network,
     }
+  }
+
+  /// Get the network this client is configured for.
+  pub fn network(&self) -> LineaNetwork {
+    self.network
   }
 
   /// Fetch beacon block header response for a given slot.
@@ -57,23 +63,45 @@ impl Client {
     Ok(response.json().await?)
   }
 
-  /// Create a `VerifyInput` for zkVM verification from an execution header.
+  /// Fetch beacon data for a given block number.
   ///
-  /// This fetches the corresponding beacon block and header for the given
-  /// execution header and packages everything into a `VerifyInput` that can
-  /// be serialized and passed into a zkVM.
-  pub async fn create_verify_input(&self, header: Header) -> eyre::Result<VerifyInput> {
+  /// This fetches the beacon block and header responses needed for verification.
+  pub async fn fetch_beacon_data(&self, block_number: u64) -> eyre::Result<BeaconData> {
     let chain_id = get_chain_id(self.network);
-    let beacon_slot = beacon_slot_from_block_number(header.number, chain_id)?;
+    let beacon_slot = beacon_slot_from_block_number(block_number, chain_id)?;
 
     let block_response = self.get_block(beacon_slot).await?;
     let beacon_slot = block_response.data.message.slot;
     let header_response = self.get_header(beacon_slot).await?;
 
-    Ok(VerifyInput::new(
-      header,
+    Ok(BeaconData {
       block_response,
       header_response,
+    })
+  }
+
+  /// Create a `VerifyInput` for zkVM verification from an execution header.
+  ///
+  /// This fetches the corresponding beacon data and packages everything into
+  /// a `VerifyInput` that can be serialized and passed into a zkVM.
+  pub async fn create_verify_input(&self, header: Header) -> eyre::Result<VerifyInput> {
+    let beacon_data = self.fetch_beacon_data(header.number).await?;
+    Ok(VerifyInput::new_header(header, beacon_data, self.network))
+  }
+
+  /// Create a `VerifyInput` for zkVM verification from a block hash.
+  ///
+  /// This fetches the corresponding beacon data and packages everything into
+  /// a `VerifyInput` that can be serialized and passed into a zkVM.
+  pub async fn create_verify_input_for_hash(
+    &self,
+    block_hash: B256,
+    block_number: u64,
+  ) -> eyre::Result<VerifyInput> {
+    let beacon_data = self.fetch_beacon_data(block_number).await?;
+    Ok(VerifyInput::new_block_hash(
+      block_hash,
+      beacon_data,
       self.network,
     ))
   }

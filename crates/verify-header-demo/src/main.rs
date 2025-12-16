@@ -4,6 +4,7 @@ use color_eyre::eyre;
 
 use linea_block_verifier::core::constants::{LineaNetwork, get_chain_id};
 use linea_block_verifier::core::verify_header;
+use linea_block_verifier::core::zkvm::UserInput;
 use linea_block_verifier::host::BeaconClient;
 use linea_block_verifier::host::rpc::{get_linea_cl_http_rpc, get_linea_el_http_rpc};
 
@@ -45,14 +46,18 @@ async fn main() -> eyre::Result<()> {
   let verify_input = beacon_client.create_verify_input(input_header).await?;
   println!(
     "Beacon block slot: {}",
-    verify_input.block_response.data.message.slot
+    verify_input.beacon_data.block_response.data.message.slot
   );
 
   // Verify the header against beacon chain data
+  let header = match &verify_input.user_input {
+    UserInput::Header(h) => h,
+    UserInput::BlockHash(_) => unreachable!("created with header"),
+  };
   verify_header(
-    &verify_input.input_header,
-    &verify_input.block_response,
-    &verify_input.header_response,
+    header,
+    &verify_input.beacon_data.block_response,
+    &verify_input.beacon_data.header_response,
     verify_input.network,
   )?;
 

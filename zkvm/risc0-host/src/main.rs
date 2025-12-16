@@ -1,6 +1,6 @@
 pub const RISC0_GUEST_ELF: &[u8] = include_bytes!(env!(concat!("R0_ELF_", "risc0-guest")));
 
-use linea_block_verifier::core::zkvm::VerifyMode;
+use linea_block_verifier::core::zkvm::{UserInput, VerifyInput};
 use linea_block_verifier::host::{
   create_verify_input, load_verify_input_from_file, save_verify_input_to_file,
 };
@@ -38,8 +38,10 @@ async fn main() -> anyhow::Result<()> {
     input
   };
 
-  let block_number = input.input_header.number;
-  let block_hash = input.input_header.hash_slow();
+  let (block_number, block_hash) = match &input.user_input {
+    UserInput::Header(h) => (h.number, h.hash_slow()),
+    UserInput::BlockHash(_) => unreachable!("create_verify_input returns Header"),
+  };
 
   println!("Validating Linea block number: {}", block_number);
   println!("Block hash: {}", block_hash);
@@ -50,13 +52,13 @@ async fn main() -> anyhow::Result<()> {
   // =========================================================================
   println!("=== Mode 1: Block Hash Verification ===");
 
-  let block_hash_input = input.to_block_hash_input();
+  let block_hash_input =
+    VerifyInput::new_block_hash(block_hash, input.beacon_data.clone(), input.network);
   let block_hash_bytes = block_hash_input.to_bytes()?;
   println!("BlockHash input: {} bytes", block_hash_bytes.len());
 
   let env = ExecutorEnv::builder()
     .segment_limit_po2(MAX_PO2)
-    .write(&VerifyMode::BlockHash)?
     .write_frame(&block_hash_bytes)
     .build()?;
 
@@ -85,7 +87,6 @@ async fn main() -> anyhow::Result<()> {
 
   let env = ExecutorEnv::builder()
     .segment_limit_po2(MAX_PO2)
-    .write(&VerifyMode::FullHeader)?
     .write_frame(&full_header_bytes)
     .build()?;
 

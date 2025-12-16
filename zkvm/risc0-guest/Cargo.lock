@@ -1191,6 +1191,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
 
 [[package]]
+name = "linea-block-verifier"
+version = "0.1.0"
+dependencies = [
+ "linea-proof-core",
+]
+
+[[package]]
 name = "linea-proof-core"
 version = "0.1.0"
 dependencies = [
@@ -1641,7 +1648,7 @@ dependencies = [
 name = "risc0-guest"
 version = "0.1.0"
 dependencies = [
- "linea-proof-core",
+ "linea-block-verifier",
  "risc0-zkvm",
 ]
 
