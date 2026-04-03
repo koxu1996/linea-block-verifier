@@ -16,7 +16,6 @@
 //! (outside of zkVM). It provides beacon chain client and RPC utilities.
 
 mod beacon;
-pub mod rpc;
 
 use alloy_eips::BlockNumberOrTag;
 use alloy_provider::Provider;
@@ -26,19 +25,12 @@ use linea_proof_core::zkvm::VerifyInput;
 
 pub use beacon::Client as BeaconClient;
 
-/// Create a `VerifyInput` from the most recent block on Linea Sepolia.
-///
-/// This is a convenience function for testing that fetches the latest block
-/// from Linea Sepolia and creates a `VerifyInput` ready for zkVM execution.
-pub async fn create_verify_input() -> eyre::Result<VerifyInput> {
-  create_verify_input_for_network(LineaNetwork::Sepolia).await
-}
-
-/// Create a `VerifyInput` from the most recent block on the specified network.
-pub async fn create_verify_input_for_network(network: LineaNetwork) -> eyre::Result<VerifyInput> {
-  let el_rpc = rpc::get_linea_el_http_rpc(network);
-  let cl_rpc = rpc::get_linea_cl_http_rpc(network);
-
+/// Create a `VerifyInput` from the most recent block using the provided RPC endpoints.
+pub async fn create_verify_input(
+  el_rpc: &str,
+  cl_rpc: &str,
+  network: LineaNetwork,
+) -> eyre::Result<VerifyInput> {
   let rpc_url = el_rpc.try_into()?;
   let provider: alloy_provider::RootProvider<alloy_provider::network::Ethereum> =
     alloy_provider::RootProvider::new_http(rpc_url);
@@ -72,9 +64,21 @@ mod tests {
   use super::*;
   use linea_proof_core::zkvm::UserInput;
 
+  fn get_test_el_rpc() -> String {
+    std::env::var("LINEA_EL_RPC").expect("LINEA_EL_RPC env var required for this test")
+  }
+
+  fn get_test_cl_rpc() -> String {
+    std::env::var("LINEA_CL_RPC").expect("LINEA_CL_RPC env var required for this test")
+  }
+
   #[::tokio::test]
   async fn test_verify_input_roundtrip() {
-    let input = create_verify_input().await.expect("should fetch input");
+    let el_rpc = get_test_el_rpc();
+    let cl_rpc = get_test_cl_rpc();
+    let input = create_verify_input(&el_rpc, &cl_rpc, LineaNetwork::Sepolia)
+      .await
+      .expect("should fetch input");
 
     // Serialize to bytes.
     let bytes = input.to_bytes().expect("should serialize");
@@ -107,8 +111,8 @@ mod tests {
     /// Verifies it matches the genesis beacon root constant.
     #[::tokio::test]
     async fn test_mainnet_genesis_beacon_root() {
-      let cl_rpc = rpc::get_linea_cl_http_rpc(LineaNetwork::Mainnet);
-      let beacon_client = BeaconClient::new(cl_rpc, LineaNetwork::Mainnet);
+      let cl_rpc = get_test_cl_rpc();
+      let beacon_client = BeaconClient::new(&cl_rpc, LineaNetwork::Mainnet);
 
       // Fetch slot 0 header
       let header_response = beacon_client
@@ -136,8 +140,8 @@ mod tests {
     /// Verifies it matches the genesis beacon root constant.
     #[::tokio::test]
     async fn test_sepolia_genesis_beacon_root() {
-      let cl_rpc = rpc::get_linea_cl_http_rpc(LineaNetwork::Sepolia);
-      let beacon_client = BeaconClient::new(cl_rpc, LineaNetwork::Sepolia);
+      let cl_rpc = get_test_cl_rpc();
+      let beacon_client = BeaconClient::new(&cl_rpc, LineaNetwork::Sepolia);
 
       // Fetch slot 0 header
       let header_response = beacon_client

@@ -17,7 +17,6 @@ use color_eyre::eyre;
 use linea_block_verifier::core::constants::{LineaNetwork, get_chain_id};
 use linea_block_verifier::core::{verify_block_hash, verify_header};
 use linea_block_verifier::host::BeaconClient;
-use linea_block_verifier::host::rpc::{get_linea_cl_http_rpc, get_linea_el_http_rpc};
 
 mod cli;
 use cli::{Args, Command, commands};
@@ -30,23 +29,14 @@ async fn main() -> eyre::Result<()> {
   let expected_chain_id = get_chain_id(linea_network);
 
   // Create RPC provider
-  let linea_el_rpc = args
-    .el_rpc
-    .as_deref()
-    .unwrap_or_else(|| get_linea_el_http_rpc(linea_network));
-  let linea_cl_rpc = args
-    .cl_rpc
-    .as_deref()
-    .unwrap_or_else(|| get_linea_cl_http_rpc(linea_network));
-
-  let rpc_url = linea_el_rpc.try_into()?;
+  let rpc_url = args.el_rpc.as_str().try_into()?;
   let provider: alloy_provider::RootProvider<alloy_provider::network::Ethereum> =
     alloy_provider::RootProvider::new_http(rpc_url);
   let chain_id = provider.get_chain_id().await?;
   assert_eq!(chain_id, expected_chain_id);
 
   // Create beacon client
-  let beacon_client = BeaconClient::new(linea_cl_rpc, linea_network);
+  let beacon_client = BeaconClient::new(&args.cl_rpc, linea_network);
 
   match &args.command {
     Command::Recent => {

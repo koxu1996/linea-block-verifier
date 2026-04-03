@@ -25,13 +25,13 @@ pub struct Args {
   #[arg(long, short, default_value = "sepolia")]
   pub network: Network,
 
-  /// Custom Linea Execution Layer RPC URL (overrides default for the selected network)
+  /// Linea Execution Layer RPC URL
   #[arg(long)]
-  pub el_rpc: Option<String>,
+  pub el_rpc: String,
 
-  /// Custom Linea Consensus Layer (Beacon) RPC URL (overrides default for the selected network)
+  /// Linea Consensus Layer (Beacon) RPC URL
   #[arg(long)]
-  pub cl_rpc: Option<String>,
+  pub cl_rpc: String,
 
   #[command(subcommand)]
   pub command: Command,
