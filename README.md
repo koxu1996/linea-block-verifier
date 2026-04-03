@@ -125,12 +125,12 @@ nix develop
 cargo test
 ```
 
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
 ## References
 
 - [Linea V4 Beta Migration Guide](https://docs.linea.build/get-started/how-to/run-a-node/beta-v4-migration)
 - [Maru Consensus](https://github.com/Consensys/maru/)
 - [Linea Documentation](https://docs.linea.build/)
-
-## License
-
-This project is licensed under the Business Source License 1.1. See [LICENSE-BSL.md](LICENSE-BSL.md) for details.

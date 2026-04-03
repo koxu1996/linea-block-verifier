@@ -136,24 +136,6 @@
           }
         );
 
-        # License header check
-        licenseCheck = pkgs.runCommand "license-check" { } ''
-          cd ${./.}
-          missing=""
-          for file in $(find crates zkvm -name '*.rs' -not -path '*/target/*'); do
-            if ! head -n 1 "$file" | grep -q "^// Copyright (c) 2025 Merge Layers Inc.$"; then
-              missing="$missing$file"$'\n'
-            fi
-          done
-          if [ -n "$missing" ]; then
-            echo "ERROR: The following .rs files are missing the license header:"
-            echo "$missing"
-            exit 1
-          fi
-          echo "All .rs files have the correct license header"
-          touch $out
-        '';
-
       in
       {
         checks = {
@@ -161,7 +143,6 @@
             linea-proof-core-no-std
             verify-header-demo
             clippy
-            licenseCheck
             ;
           formatting = treefmtEval.config.build.check self;
         };
