@@ -30,8 +30,14 @@ async fn main() -> eyre::Result<()> {
   let expected_chain_id = get_chain_id(linea_network);
 
   // Create RPC provider
-  let linea_el_rpc = get_linea_el_http_rpc(linea_network);
-  let linea_cl_rpc = get_linea_cl_http_rpc(linea_network);
+  let linea_el_rpc = args
+    .el_rpc
+    .as_deref()
+    .unwrap_or_else(|| get_linea_el_http_rpc(linea_network));
+  let linea_cl_rpc = args
+    .cl_rpc
+    .as_deref()
+    .unwrap_or_else(|| get_linea_cl_http_rpc(linea_network));
 
   let rpc_url = linea_el_rpc.try_into()?;
   let provider: alloy_provider::RootProvider<alloy_provider::network::Ethereum> =
