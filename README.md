@@ -2,6 +2,8 @@
 
 > **⚠️ This repository has been archived due to the sunset of the Malda Sequencer.**
 
+> **⚠️ This library has not been audited. Use at your own risk.**
+
 Cryptographically verify Linea blocks using beacon chain attestations and sequencer signatures.
 
 ## Overview
