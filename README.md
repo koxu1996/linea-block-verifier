@@ -1,5 +1,7 @@
 # Linea Block Verifier
 
+> **⚠️ This repository has been archived due to the sunset of the Malda Sequencer.**
+
 Cryptographically verify Linea blocks using beacon chain attestations and sequencer signatures.
 
 ## Overview
